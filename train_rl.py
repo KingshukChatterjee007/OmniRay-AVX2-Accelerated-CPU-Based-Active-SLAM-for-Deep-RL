@@ -413,6 +413,7 @@ def train():
     callbacks = []
     if use_adaptive and adaptive_env is not None:
         adaptive_env.set_model(model)
+        adaptive_env.is_training_mode = True
         adaptive_callback = AdaptiveCallback(adaptive_env=adaptive_env, verbose=1)
         callbacks.append(adaptive_callback)
         print("  [ADAPTIVE] AdaptiveCallback registered for entropy + health logging.")

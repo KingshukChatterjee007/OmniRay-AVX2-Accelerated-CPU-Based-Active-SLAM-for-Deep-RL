@@ -197,7 +197,15 @@ class ContinualLearner:
                 except OSError:
                     pass
 
+        # Guard against recursive retraining and save original target steps
+        if getattr(self, "_is_retraining", False):
+            return {"retrained": False}
+
+        orig_total_timesteps = getattr(model, "_total_timesteps", None)
+        self._is_retraining = True
+
         # 2. Retrain on the current environment
+        result = {"retrained": False}
         try:
             model.learn(
                 total_timesteps=self.retrain_steps,
@@ -223,6 +231,11 @@ class ContinualLearner:
                 "error": str(e),
                 "checkpoint_path": checkpoint_path,
             }
+        finally:
+            self._is_retraining = False
+            # Restore the original training target steps for the outer loop
+            if orig_total_timesteps is not None:
+                model._total_timesteps = orig_total_timesteps
 
         return result
 
