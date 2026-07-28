@@ -92,16 +92,19 @@ def evaluate_agent(model_path: str, save_dir: str, num_rays: int, map_res: int, 
     reward_history = []
     health_history = []  # Adaptive health scores
     
+    # Unwrap to base env when adaptive wrapper is in use (it doesn't proxy _robot_x etc.)
+    base_env_ref = env.env if hasattr(env, "env") else env
+
     # Initial states
-    gt_x, gt_y, gt_theta = env._robot_x, env._robot_y, env._robot_theta
+    gt_x, gt_y, gt_theta = base_env_ref._robot_x, base_env_ref._robot_y, base_env_ref._robot_theta
     odom_x, odom_y, odom_theta = gt_x, gt_y, gt_theta
     
     # Record initial step
     gt_trajectory.append((gt_x, gt_y))
     odom_trajectory.append((odom_x, odom_y))
     
-    best_idx = np.argmax(env.slam.weights)
-    slam_pose = env.slam.particles[best_idx]
+    best_idx = np.argmax(base_env_ref.slam.weights)
+    slam_pose = base_env_ref.slam.particles[best_idx]
     slam_trajectory.append((slam_pose[0], slam_pose[1]))
     
     coverage_history.append(info["coverage"])
@@ -129,11 +132,11 @@ def evaluate_agent(model_path: str, save_dir: str, num_rays: int, map_res: int, 
         odom_y += linear_vel * np.sin(odom_theta)
         
         # Retrieve actual ground truth pose
-        gt_x, gt_y, gt_theta = env._robot_x, env._robot_y, env._robot_theta
+        gt_x, gt_y, gt_theta = base_env_ref._robot_x, base_env_ref._robot_y, base_env_ref._robot_theta
         
         # Retrieve SLAM estimated pose
-        best_idx = np.argmax(env.slam.weights)
-        slam_pose = env.slam.particles[best_idx]
+        best_idx = np.argmax(base_env_ref.slam.weights)
+        slam_pose = base_env_ref.slam.particles[best_idx]
         
         # Record trajectories
         gt_trajectory.append((gt_x, gt_y))
@@ -185,12 +188,12 @@ def evaluate_agent(model_path: str, save_dir: str, num_rays: int, map_res: int, 
 
     # Plot 1: Trajectory Comparison (Left)
     ax_traj = axes[0]
-    ax_traj.set_xlim(-10, env.arena_size + 10)
-    ax_traj.set_ylim(-10, env.arena_size + 10)
+    ax_traj.set_xlim(-10, base_env_ref.arena_size + 10)
+    ax_traj.set_ylim(-10, base_env_ref.arena_size + 10)
     ax_traj.set_aspect("equal")
     
     # Draw Arena boundary walls and obstacles
-    for x1, y1, x2, y2 in env._walls:
+    for x1, y1, x2, y2 in base_env_ref._walls:
         ax_traj.plot([x1, x2], [y1, y2], color="#ff6b6b", linewidth=2.5, alpha=0.8)
         
     # Plot trajectories
@@ -208,11 +211,11 @@ def evaluate_agent(model_path: str, save_dir: str, num_rays: int, map_res: int, 
     
     # Plot 2: VectorSLAM Probability Map (Right)
     ax_map = axes[1]
-    slam_prob = 1.0 / (1.0 + np.exp(-env.slam.map))
+    slam_prob = 1.0 / (1.0 + np.exp(-base_env_ref.slam.map))
     
     im = ax_map.imshow(
         slam_prob, origin="lower", cmap="inferno",
-        extent=[0, env.arena_size, 0, env.arena_size],
+        extent=[0, base_env_ref.arena_size, 0, base_env_ref.arena_size],
         vmin=0.0, vmax=1.0,
     )
     

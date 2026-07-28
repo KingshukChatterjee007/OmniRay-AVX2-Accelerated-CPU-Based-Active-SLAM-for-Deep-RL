@@ -360,8 +360,8 @@ class AdaptiveActiveSLAMEnv(gym.Wrapper):
                 difficulty_score=difficulty,
             )
 
-            # Attempt retrain if conditions are met
-            if self._model_ref is not None:
+            # Attempt retrain if conditions are met and we are not in training mode
+            if self._model_ref is not None and not getattr(self, "is_training_mode", False):
                 retrain_result = self.continual_learner.maybe_retrain(
                     model=self._model_ref,
                     env=self.env,
