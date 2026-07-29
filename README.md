@@ -243,6 +243,9 @@ A specialized ablation study suite has been created to analyze hyperparameter se
 3. Physical Noise Robustness: Analyzes learning under active slippage and sensor drops vs ideal, zero-noise physical kinematics (--no-noise).
 4. Full Matrix Validation: An extended ablation matrix over 14 configurations and 3 random seeds (50,000 steps per run) proves the architectural stability of the 5-layer system. Output graphs with error bars (health score and peak reward) are saved in ablation_eval_full/.
 
+![Ablation Health Score Stability](ablation_eval_full/ablation_3seed_health_score_errorbars.png)
+![Ablation Peak Reward Consistency](ablation_eval_full/ablation_3seed_peak_reward_errorbars.png)
+
 ### How to Run:
 > [!IMPORTANT]
 > The scripts are fully prepared. Execute them only when you are ready to start training.
@@ -268,6 +271,8 @@ The 5-layer autonomous system significantly outperforms the classical baseline b
 * Considerably fewer wall collisions due to learned obstacle avoidance.
 
 The benchmark suite (`scratch/test_on_intel_dataset.py`) generates a comprehensive 4-panel publication visualization comparing the trajectories, map coverage progression, and the final reconstructed occupancy map.
+
+![Intel Lab Benchmark Results](ablation_eval_full/intel_lab_benchmark_report.png)
 
 ---
 
