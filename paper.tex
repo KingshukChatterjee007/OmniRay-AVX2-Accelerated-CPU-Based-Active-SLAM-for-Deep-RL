@@ -15,11 +15,11 @@
 
 \geometry{margin=1in}
 
-\title{OmniRay: Adaptive Curriculum Learning for Real-Time Active SLAM \\
-\Large Multi-Seed Ablation Study \& Classical Baseline Comparison}
+\title{\textbf{OmniRay: Adaptive Curriculum Learning for Real-Time Active SLAM} \\
+\Large Multi-Seed Ablation Study, Kinodynamic Noise Analysis, \& Classical Baseline Comparison}
 
-\author{Kingshuk Chatterjee \\
-KIIT University, Bhubaneswar, India \\
+\author{\textbf{Kingshuk Chatterjee} \\
+Department of Computer Science \& Engineering, KIIT University, Bhubaneswar, India \\
 \texttt{kingshuk.chatterjee@kiit.ac.in}}
 
 \date{July 28, 2026}
@@ -94,7 +94,7 @@ Prior literature treats reward shaping, curriculum scaling, and experience repla
 % ============================================================================
 % METHODOLOGY
 % ============================================================================
-\section{Methodology}
+\section{Methodology \& System Formulation}
 
 \begin{figure}[H]
 \centering
@@ -103,7 +103,61 @@ Prior literature treats reward shaping, curriculum scaling, and experience repla
 \label{fig:architecture}
 \end{figure}
 
-\subsection{C++ AVX2 SIMD Raycasting Engine}
+\subsection{POMDP Problem Formulation}
+
+We formulate Active SLAM as a Partially Observable Markov Decision Process (POMDP) defined by the tuple $\langle \mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \Omega, \mathcal{O}, \gamma \rangle$.
+
+\begin{itemize}
+    \item \textbf{State Space ($\mathcal{S}$)}: The hidden global environment state $s_t = \langle \mathbf{x}_t, \mathbf{m}, \mathcal{O}_{\text{known}} \rangle$, where $\mathbf{x}_t = [x_t, y_t, \theta_t]^T$ is the true ground-truth pose of the differential drive robot, $\mathbf{m}$ is the true static map, and $\mathcal{O}_{\text{known}}$ is the explored grid region.
+    
+    \item \textbf{Observation Space ($\Omega$)}: The multi-modal observation tensor $o_t = \langle M_{\text{cov}}^{(t)}, M_{\text{slam}}^{(t)}, z_t, p_t \rangle$:
+    \begin{align}
+        M_{\text{cov}}^{(t)} &\in \{0, 1\}^{H \times W} \quad (\text{Explored Frontier Grid Map}) \\
+        M_{\text{slam}}^{(t)} &= \log \frac{P(m_{ij}=1 \mid z_{1:t})}{1 - P(m_{ij}=1 \mid z_{1:t})} \in \mathbb{R}^{H \times W} \quad (\text{SLAM Log-Odds Belief}) \\
+        z_t &= \{r_k\}_{k=1}^{128}, \quad r_k \in [0, d_{\max}] \quad (\text{LiDAR Radial Distance Sweep}) \\
+        p_t &= [x_{\text{odom}}, y_{\text{odom}}, \theta_{\text{odom}}, v_{t-1}, \omega_{t-1}]^T \in \mathbb{R}^5 \quad (\text{Kinematic Pose History})
+    \end{align}
+
+    \item \textbf{Action Space ($\mathcal{A}$)}: Continuous velocity commands $a_t = [v_t, \omega_t]^T \in [-1, 1]^2$, scaled to physical linear velocity $v \in [0, 1.2]\,\text{m/s}$ and angular velocity $\omega \in [-1.0, 1.0]\,\text{rad/s}$.
+
+    \item \textbf{Reward Function ($\mathcal{R}$)}: Multi-objective composite shaping reward:
+    \begin{equation}
+        R_t = w_{\text{exp}} \Delta C_t + w_{\text{front}} \Delta D_{\text{frontier}} - w_{\text{col}} I_{\text{collision}} - w_{\text{time}} + w_{\text{health}} H_t
+    \end{equation}
+    where $\Delta C_t$ is the number of newly explored grid cells, $\Delta D_{\text{frontier}}$ is the distance step toward the nearest frontier, and $I_{\text{collision}}$ is a binary collision indicator.
+\end{itemize}
+
+\subsection{Dual-Branch CNN-MLP Architecture \& PPO Optimization}
+
+To fuse high-dimensional spatial maps with continuous vector kinematics, OmniRay employs a dual-branch encoder network followed by a concatenated 256-D fusion layer:
+
+\begin{enumerate}
+    \item \textbf{2D Spatial CNN Branch}: Accepts the 2-channel tensor $\mathbf{X}_{2D} = [M_{\text{cov}}^{(t)} \,||\, M_{\text{slam}}^{(t)}] \in \mathbb{R}^{2 \times 100 \times 100}$. It processes features through two convolutional stages:
+    \begin{align}
+        \mathbf{H}_1 &= \text{ReLU}\left( \text{BatchNorm}\left( \text{Conv2D}_{2 \to 16, 3\times3, s=2}(\mathbf{X}_{2D}) \right) \right) \\
+        \mathbf{H}_2 &= \text{ReLU}\left( \text{BatchNorm}\left( \text{Conv2D}_{16 \to 32, 3\times3, s=2}(\mathbf{H}_1) \right) \right) \\
+        \mathbf{h}_{2D} &= \text{Linear}_{20000 \to 128}\left( \text{Flatten}(\mathbf{H}_2) \right) \in \mathbb{R}^{128}
+    \end{align}
+
+    \item \textbf{1D Kinematic MLP Branch}: Accepts the 133-dimensional vector $\mathbf{x}_{1D} = [z_t \,||\, p_t] \in \mathbb{R}^{133}$ and evaluates:
+    \begin{equation}
+        \mathbf{h}_{1D} = \text{ReLU}\left( \mathbf{W}_2 \cdot \text{ReLU}\left( \mathbf{W}_1 \mathbf{x}_{1D} + \mathbf{b}_1 \right) + \mathbf{b}_2 \right) \in \mathbb{R}^{128}
+    \end{equation}
+
+    \item \textbf{Concatenated Fusion \& Policy Head}:
+    \begin{equation}
+        \mathbf{z}_t = [\mathbf{h}_{2D} \,||\, \mathbf{h}_{1D}] \in \mathbb{R}^{256}
+    \end{equation}
+    The actor projects $\mathbf{z}_t$ to mean action $\boldsymbol{\mu}_\theta(\mathbf{z}_t)$, sampling actions from a Gaussian policy $\pi_\theta(a_t \mid o_t) = \mathcal{N}(\boldsymbol{\mu}_\theta(\mathbf{z}_t), \boldsymbol{\Sigma})$. The critic projects $\mathbf{z}_t$ to scalar state-value $V_\phi(o_t) = \mathbf{W}_V \mathbf{z}_t + b_V$.
+\end{enumerate}
+
+Policy parameters $\theta$ and value parameters $\phi$ are optimized using the PPO clipped surrogate objective:
+\begin{equation}
+    \mathcal{L}^{\text{CLIP}}(\theta) = \hat{\mathbb{E}}_t \left[ \min\left( r_t(\theta)\hat{A}_t, \, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon)\hat{A}_t \right) \right]
+\end{equation}
+where $r_t(\theta) = \frac{\pi_\theta(a_t \mid o_t)}{\pi_{\theta_{\text{old}}}(a_t \mid o_t)}$ and $\hat{A}_t$ is the Generalized Advantage Estimator (GAE).
+
+\subsection{C++ AVX2 SIMD Raycasting Vectorization Algorithm}
 
 LiDAR simulation is often the bottleneck in DRL environment rollouts. OmniRay implements a custom C++ raycaster bound via \texttt{pybind11}. Given a robot pose $(x, y, \theta)$, the engine casts $N_r = 128$ rays across a $360^\circ$ field-of-view:
 
@@ -143,6 +197,11 @@ Particle importance weights $w_k$ are evaluated via parallel map sampling:
 
 \begin{equation}
 w_k \propto \exp\left( \frac{1}{2} \sum_{i \in \text{hits}} M(gy_k^i, gx_k^i) \right)
+\end{equation}
+
+Resampling is triggered when the effective particle count drops below threshold:
+\begin{equation}
+    N_{\text{eff}} = \frac{1}{\sum_{k=1}^{N_p} (w_k)^2} < \frac{N_p}{2}
 \end{equation}
 
 \subsection{The 5-Layer Self-Adaptive Autonomy System}
@@ -339,9 +398,17 @@ r(\theta) = a + b\theta
 This trajectory pattern provides three distinct mathematical advantages:
 
 \begin{enumerate}
-    \item \textbf{Continuous LiDAR Sweeping}: Maximizes the angular sweep rate of all 128 rays across unmapped space.
+    \item \textbf{Continuous LiDAR Sweeping}: Maximizes the angular sweep rate of all 128 rays across unmapped space:
+    \begin{equation}
+        \frac{d\mathcal{C}}{dt} \propto r(\theta) \cdot \frac{d\theta}{dt} = (a + b\theta) \cdot \omega_t
+    \end{equation}
+    
     \item \textbf{Zero In-Place Stops}: Avoids sharp $90^\circ$ turn-in-place maneuvers that induce severe differential-drive wheel slip.
-    \item \textbf{Smooth Curvature}: Keeps wheel velocity differentials small, minimizing odometry drift.
+    
+    \item \textbf{Smooth Curvature Minimizing Slip Acceleration}: Keeps centrifugal acceleration $a_c$ below tire traction thresholds:
+    \begin{equation}
+        a_c = v^2 \kappa(\theta) = v^2 \frac{r^2 + 2(r')^2 - r r''}{\left(r^2 + (r')^2\right)^{3/2}} < \mu_s g
+    \end{equation}
 \end{enumerate}
 
 In contrast, Yamauchi's algorithm selects discrete point goals, forcing the robot to stop, rotate, and drive straight. Under physical wheel slip, rotational errors compound, causing the robot to bounce repeatedly off wall boundaries.
