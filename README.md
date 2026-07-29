@@ -4,28 +4,43 @@ A high-performance, pluggable raycasting engine, parallelized particle filter, a
 
 ---
 
+## Table of Contents
+- [What is OmniRay?](#what-is-omniray-project-overview--purpose)
+- [System Architecture](#system-architecture)
+- [Project Accomplishments & Performance Summary](#project-accomplishments--performance-summary)
+- [Getting Started & Quick Demo](#getting-started--quick-demo)
+- [5-Layer Self-Adaptive Autonomy System](#5-layer-self-adaptive-autonomy-system)
+- [Codebase Structure](#codebase-structure)
+- [Hyperparameter Configuration](#hyperparameter-configuration-configyaml)
+- [Active SLAM Environment Reward Tuning](#active-slam-environment-reward-tuning)
+- [Ablation Studies](#ablation-studies-run_ablation_studypy)
+- [Intel Research Lab Real Floorplan Benchmark](#intel-research-lab-real-floorplan-benchmark)
+- [Architectural Design Rationale & Baseline Justification](#architectural-design-rationale--baseline-justification)
+- [Quantitative Benchmark Results](#quantitative-benchmark-results-360-rays)
+
+---
+
 ## What is OmniRay? (Project Overview & Purpose)
 
+OmniRay is an advanced research testbed designed to address the Active SLAM (Simultaneous Localization and Mapping) problem in mobile robotics using Deep Reinforcement Learning (Deep RL).
 
-OmniRay is an advanced research testbed designed to solve the Active SLAM (Simultaneous Localization and Mapping) problem in mobile robotics using Deep Reinforcement Learning (Deep RL).
+### Problem Statement
+In traditional robotics, SLAM is often passive: the robot relies on human teleoperation or pre-calculated static path-planners, and the SLAM module maps whatever sensors detect. This can result in degraded exploration efficiency, localization drift under feature-sparse environments, or mapping divergence when encountering wheel slip and non-Gaussian actuator noise.
 
-### The Problem it Solves
-In traditional robotics, SLAM is passive: the robot relies on human commands or pre-calculated static path-planners to move, and the SLAM system simply maps whatever the sensors detect. This often leads to poor exploration efficiency, high localization drift (especially in featureless environments), or catastrophic mapping failures when the robot encounters wheel slip.
+Furthermore, training deep reinforcement learning agents directly in realistic physics simulators or on physical hardware presents high computational overhead. Sensor raycasting (simulating LiDAR sweeps) and scan-matching (updating particle filters) frequently create processing bottlenecks that restrict RL throughput.
 
-Furthermore, training deep reinforcement learning agents directly in realistic physics simulators or on physical hardware is incredibly slow and computationally expensive. The sensor raycasting (simulating LiDAR sweeps) and scan-matching (updating particle filters) usually create severe bottlenecks that limit training cycles.
+### Proposed Solution
+OmniRay provides a configuration-driven, CPU-accelerated active SLAM engine designed to address these challenges through:
 
-### The OmniRay Proposal & Solution
-OmniRay proposes a configuration-driven, hyper-accelerated active SLAM engine that solves these challenges through:
-
-1. Active Mapping via Deep RL: Rather than following static paths, the PPO (Proximal Policy Optimization) agent is trained using a custom CNN-MLP fusion network to actively choose navigation velocities. It dynamically balances the trade-off between exploring new regions (frontier reward shaping) and maintaining accurate localization (minimizing particle filter pose drift).
-2. AVX2 & Pure-NumPy Acceleration: By leveraging SIMD vector alignment and loops-free 2D NumPy broadcasting, the raycaster and VectorSLAM particle filter operate at compiled C-level speeds (under 3.2 ms per simulation step). This enables rapid agent training on consumer-grade CPUs in minutes rather than days.
-3. Sim-to-Real Robustness: Directly embeds continuous kinodynamic tire slippage, yaw drift, LiDAR distance noise, and random laser dropouts inside the training loop. This forces the agent to learn robust trajectories that actively help the particle filter match scans, correcting 95.1% of localization drift without requiring ideal physical conditions.
+1. **Active Mapping via Deep RL**: Rather than relying on static paths, a Proximal Policy Optimization (PPO) agent uses a multi-input CNN-MLP fusion architecture to select navigation velocities dynamically balancing spatial exploration (frontier attraction shaping) and localization accuracy (mitigating particle filter pose drift).
+2. **AVX2 SIMD & Vectorized Acceleration**: By leveraging 256-bit SIMD vector instructions in C++ and loop-free vectorized operations in NumPy, the raycaster and VectorSLAM particle filter execute at low per-step latencies (under 3.2 ms per simulation step), enabling RL training on consumer CPUs.
+3. **Sim-to-Real Noise Formulation**: Embeds continuous kinodynamic tire slippage, yaw drift, LiDAR distance noise, and random laser dropouts into the training loop, training the agent to prefer trajectories that preserve scan matching accuracy while mitigating localization drift.
 
 ---
 
 ## System Architecture
 
-Here is the horizontal data-flow architecture of the OmniRay Active SLAM Deep RL system:
+Below is the closed-loop data-flow architecture of the OmniRay Active SLAM framework:
 
 ![OmniRay Architecture Diagram](assets/architecture_detailed_formulas.png)
 
@@ -33,13 +48,13 @@ Here is the horizontal data-flow architecture of the OmniRay Active SLAM Deep RL
 
 ## Project Accomplishments & Performance Summary
 
-* AVX2 SIMD & NumPy Spatial Discovery Engine: Built a C++ AVX2 SIMD-accelerated raycaster (`SimdRaycaster`) with raw scan times of **0.038 ms** (a 26x speedup over the optimized NumPy baseline!) and a parallelized pure-NumPy particle filter (`VectorSLAM`), executing the entire active SLAM environment step in under 3.2 ms.
-* Realistic Sim-to-Real Degradation Models: Integrated continuous kinodynamic wheel slip errors, constant yaw drifts, and non-ideal LiDAR distance noise (with random dropouts) to simulate a differential-drive robot.
-* Master Explorer Convergence: Fully converged a custom Multi-Input CNN-MLP PPO agent, increasing average episode reward by +123% (reaching 1,530).
-* 95.1% Drift Reduction: Confirmed via quantitative testing that the PPO policy guides the robot to keep final positioning drift to a minuscule 1.02 units (a 95.1% drift correction relative to uncorrected dead-reckoning).
-* 5-Layer Self-Adaptive Autonomy System: Implemented a closed-loop feedback architecture with real-time health monitoring, dynamic reward adaptation, a meta-policy that learns to tune rewards, an auto-difficulty curriculum, and in-deployment continual learning.
-* Real-World Generalization (Intel Lab): Benchmarked against classical Yamauchi (1997) Frontier Exploration on the Intel Research Lab floorplan, demonstrating superior exploration efficiency, higher coverage, and fewer collisions in complex multi-room environments.
-* Rigorous Ablation Matrix: Executed a comprehensive ablation matrix covering 14 configurations across 3 random seeds (50,000 steps per run) to validate health score stability and peak reward consistency across architectural variations.
+* **AVX2 SIMD & NumPy Spatial Discovery Engine**: Implemented a C++ AVX2 SIMD-accelerated raycaster (`SimdRaycaster`) achieving scan latencies down to **0.038 ms** (a 26× speedup relative to the vectorized NumPy baseline) and a parallelized NumPy particle filter (`VectorSLAM`), executing the full active SLAM environment step under 3.2 ms.
+* **Sim-to-Real Noise Degradation Models**: Integrated continuous kinodynamic wheel slip errors, constant yaw drifts, and non-ideal LiDAR distance noise (with random dropouts) for differential-drive kinematics.
+* **Multi-Input Policy Convergence**: Trained a Multi-Input CNN-MLP PPO policy, increasing average episode reward by +123% (reaching asymptotic evaluation scores of 1,530).
+* **Drift Reduction**: Quantitative evaluation demonstrates that the policy maintains position drift to 1.02 units (a 95.1% reduction in cumulative drift compared to uncorrected dead-reckoning).
+* **5-Layer Self-Adaptive Autonomy System**: Implemented a hierarchical feedback control architecture comprising real-time health monitoring, dynamic reward adaptation, a neural meta-policy for reward weight selection, an automated difficulty curriculum, and online experience replay.
+* **Real-World Floorplan Evaluation (Intel Lab)**: Evaluated against classical Yamauchi (1997) Frontier Exploration on the Intel Research Lab floorplan, achieving higher coverage efficiency, shorter execution paths, and fewer wall collisions in multi-room environments.
+* **Multi-Seed Ablation Study**: Executed a 14-configuration ablation matrix across 3 random seeds (50,000 steps per run) to measure health score stability and peak reward consistency across component variations.
 
 ### Sim-to-Real Evaluation & Noise Robustness
 
@@ -48,167 +63,187 @@ Here is the horizontal data-flow architecture of the OmniRay Active SLAM Deep RL
 
 ---
 
-## Codebase Structure
+## Getting Started & Quick Demo
 
+### 1. Install Dependencies
+Run in a Python 3.11 environment:
+```bash
+pip install -r requirements.txt
 ```
-OmniRay/
-│
-├── ablation_eval_full/         # Plots and errorbar graphs from the 3-seed, 14-config ablation matrix
-│
-├── assets/
-│
-├── envs/
-│   ├── __init__.py
-│   ├── active_slam_env.py      # Gymnasium Active SLAM Environment & noise models
-│   ├── raycaster_backends.py   # Pluggable Raycasting Backends (NumPy, PyMunk, SIMD)
-│   ├── vector_slam.py          # Parallelized Pure-NumPy Particle Filter Engine
-│   ├── health_monitor.py       # Layer 1: Real-time self-awareness health scoring
-│   ├── adaptive_reward.py      # Layer 2: Dynamic reward weight adjustment
-│   ├── meta_policy.py          # Layer 3: Neural meta-policy that learns optimal rewards
-│   ├── curriculum.py           # Layer 4: Auto-difficulty curriculum manager
-│   ├── continual_learner.py    # Layer 5: In-deployment replay buffer & retrain
-│   └── adaptive_env.py         # Orchestration wrapper composing all 5 layers
-│
-├── profiling/
-│   ├── __init__.py
-│   ├── benchmark_bottleneck.py # Bottleneck Profiler & Decision Engine
-│   └── benchmark_slam.py       # Speed comparison between backends
-│
-├── results/                    # Diagnostic output directory
-│   ├── robust_evaluation_report.png
-│   └── robust_exploration_progression.png
-│
-├── scratch/
-│   └── test_on_intel_dataset.py # Intel Research Lab benchmark script (OmniRay vs Yamauchi)
-│
-├── sim/
-│   ├── CMakeLists.txt          # C++ compiler config (AVX2 & pybind11)
-│   ├── src/
-│   │   ├── bindings.cpp        # pybind11 wrapper definitions
-│   │   ├── raycaster.cpp       # AVX2 8-lane parallel SIMD implementation
-│   │   └── raycaster.h         # C++ raycaster API header
-│   └── test_raycaster.py       # C++ correctness and speed validation
-│
-├── config.yaml                 # Centralized training, network & adaptive hyperparameters
-├── requirements.txt            # Pinned package dependencies
-├── train_rl.py                 # PPO deep RL pipeline (ablation + adaptive ready)
-├── evaluate_and_record.py      # Quantitative trajectory evaluator (saves to results/)
-├── run_ablation_study.py       # Ablation study sequencer (entropy, rewards, noise)
-├── visualize_agent.py          # Real-time human visualizer (matplotlib GUI)
-├── test_env.py                 # Environment smoke test with rendering
-└── README.md                   # Interactive documentation
+
+### 2. Compile the C++ SIMD Backend
+The active SLAM environment defaults to the compiled C++ SIMD backend (`--backend simd`). If uncompiled, it falls back to the NumPy backend.
+
+To compile:
+```bash
+cd sim
+mkdir build
+cd build
+cmake ..
+cmake --build . --config Release
+cd ../..
+```
+
+### 3. Run Pre-trained Agent Visualizer (Quick Demo)
+To visualize the pre-trained robust policy in real time:
+```powershell
+py -3.11 visualize_agent.py --model-path active_slam_ppo_robust_master.zip --episodes 3 --max-steps 400
+```
+
+### 4. Run Bottleneck Profiler & Gym Environment Test
+```powershell
+# Benchmark backends (Pure Python, PyMunk, NumPy, C++ SIMD)
+py -3.11 -m profiling.benchmark_bottleneck --rays 360 --iterations 500
+
+# Gymnasium active SLAM environment smoke test
+py -3.11 test_env.py --backend simd --episodes 3 --max-steps 150
 ```
 
 ---
 
 ## 5-Layer Self-Adaptive Autonomy System
 
-OmniRay includes a full self-adaptive autonomy architecture that makes the agent appear to "think, learn, and improve" through layered feedback loops. Enable it with `--adaptive`:
+OmniRay incorporates a hierarchical self-adaptive autonomy system using closed-loop feedback across five modular layers. Enable full adaptation during training via `--adaptive`:
 
-### The 5 Layers
+### Autonomy Layer Specifications
 
-| Layer | Module | What It Does |
+| Layer | Module | Primary Function |
 | :---: | :--- | :--- |
-| **1** | `health_monitor.py` | **Self-Awareness** — Computes a real-time health score (0–1) from entropy behavior, coverage velocity, and SLAM confidence. Detects when the agent is stuck, lost, or stalling. |
-| **2** | `adaptive_reward.py` | **Adaptive Reward** — Dynamically modifies reward weights based on health. Stuck? Boost frontier pull 2×. Lost? Add safety penalty. Thriving? Reduce exploration and focus unknowns. |
-| **3** | `meta_policy.py` | **Meta-Learner** — A small neural network that *learns* the optimal reward weight configuration from health metrics using REINFORCE-style updates. Replaces heuristic rules with learned tuning. |
-| **4** | `curriculum.py` | **Self-Difficulty** — Auto-adjusts obstacles, arena size, noise level, and step budget based on rolling coverage performance. Keeps the environment at the edge of the agent's capability. |
-| **5** | `continual_learner.py` | **Continual Learner** — Records episodes in a replay buffer and periodically retrains the policy. Checkpoints before each retrain and auto-rollbacks on degradation. |
+| **1** | `health_monitor.py` | **System State Monitoring** — Computes a continuous health score ($H_t \in [0, 1]$) derived from mapping entropy rate, coverage velocity, and particle filter divergence. |
+| **2** | `adaptive_reward.py` | **Dynamic Reward Adaptation** — Modifies reward coefficients based on real-time health metrics (e.g., increasing frontier pull during exploration stalls or introducing safety penalties during localization drift). |
+| **3** | `meta_policy.py` | **Meta-Policy Controller** — A neural controller that optimizes reward weighting configurations based on observed environment states using policy gradient updates. |
+| **4** | `curriculum.py` | **Curriculum Manager** — Dynamically adjusts obstacle density, map dimensions, noise magnitude, and step budgets based on rolling episode coverage metrics. |
+| **5** | `continual_learner.py` | **Continual Learner** — Collects episode transitions into a replay buffer and periodically updates the base policy online, with automated checkpoints and rollback mechanisms. |
 
-### Adaptive Training Commands
+### Adaptive Execution Commands
 
-* **Full adaptive mode (all 5 layers):**
+* **Full Adaptive Architecture (Layers 1–5):**
   ```powershell
   py -3.11 train_rl.py --adaptive --meta-policy --curriculum --continual --total-steps 100000
   ```
 
-* **Layers 1-2 only (health + adaptive reward, no meta-learning):**
+* **Rule-Based Dynamic Adaptation (Layers 1–2):**
   ```powershell
   py -3.11 train_rl.py --adaptive --total-steps 50000
   ```
 
-* **Adaptive evaluation (health monitoring during eval):**
+* **Adaptive Evaluation:**
   ```powershell
   py -3.11 evaluate_and_record.py --model-path active_slam_ppo.zip --adaptive --steps 200
   ```
 
-### One Episode Flow
+### Information Flow Per Step
 
 ```
-Step 1: Health Monitor checks vitals
+Step 1: Health Monitor evaluates state vitals
   └─> entropy=1.2, coverage_velocity=0.3, SLAM_confidence=0.85
-  └─> health_score = 0.7 (okay, not great)
+  └─> health_score = 0.7
 
-Step 2: Health info → Meta-Policy (if enabled)
-  └─> Meta-Policy outputs: "boost frontier ×1.5, add curiosity 0.2"
+Step 2: State metrics passed to Meta-Policy (if enabled)
+  └─> Meta-Policy adjusts weight coefficients: [w_frontier × 1.5, w_entropy × 0.2]
 
-Step 3: Adaptive Reward applies those weights
-  └─> adjusted_reward = base + (frontier × 1.5) + (entropy × 0.2)
+Step 3: Adaptive Reward updates reward structure
+  └─> R_adjusted = R_base + (1.5 × R_frontier) + (0.2 × R_entropy)
 
-Step 4: Agent learns from adjusted reward signal
-  └─> Policy updates toward high-frontier, high-curiosity actions
+Step 4: Agent updates policy based on adjusted reward
 
-Step 5: If health stays low for 100+ steps
-  └─> Curriculum increases difficulty (+2 obstacles, +noise)
+Step 5: Low-health persistence check (100+ steps)
+  └─> Curriculum Manager scales scenario difficulty (+2 obstacles, +noise)
 
-Step 6: After episode ends
-  └─> Record in replay buffer → retrain every 10 episodes
-  └─> Policy evolves continuously
+Step 6: Post-episode evaluation
+  └─> Transition buffer storage → periodic online retraining sequence
 ```
 
 ---
 
-## Make it Demo-able (Run in 1 Command!)
+## Codebase Structure
 
-You can instantly watch the pre-trained robust Master Explorer agent actively navigate the noisy arena and build its SLAM map using a single command:
-
-```powershell
-py -3.11 visualize_agent.py --model-path active_slam_ppo_robust_master.zip --episodes 3 --max-steps 400
+```
+OmniRay/
+│
+├── ablation_eval_full/         # Output plots and error-bar graphs from the 14-config multi-seed ablation matrix
+├── assets/                     # Architecture diagrams and static documentation visual assets
+│
+├── envs/                       # Gymnasium Active SLAM Environment and autonomy modules
+│   ├── __init__.py
+│   ├── active_slam_env.py      # Main Gymnasium environment implementation & kinodynamic noise models
+│   ├── raycaster_backends.py   # Pluggable raycasting backends (NumPy, PyMunk, SIMD)
+│   ├── vector_slam.py          # Parallelized pure-NumPy particle filter engine
+│   ├── health_monitor.py       # Layer 1: Real-time system monitoring & health scoring
+│   ├── adaptive_reward.py      # Layer 2: Dynamic reward weight adaptation engine
+│   ├── meta_policy.py          # Layer 3: Neural meta-policy for reward parameter optimization
+│   ├── curriculum.py           # Layer 4: Automated curriculum difficulty manager
+│   ├── continual_learner.py    # Layer 5: In-deployment experience buffer & retraining
+│   └── adaptive_env.py         # Modular wrapper orchestrating Autonomy Layers 1–5
+│
+├── profiling/                  # Performance benchmarks and bottleneck profiling scripts
+│   ├── __init__.py
+│   ├── benchmark_bottleneck.py # Raycasting latency profiler across backends
+│   └── benchmark_slam.py       # Particle filter runtime evaluation
+│
+├── results/                    # Diagnostic trajectory logs and evaluation plots
+├── scratch/
+│   └── test_on_intel_dataset.py # Intel Research Lab benchmark script (OmniRay vs Yamauchi)
+│
+├── sim/                        # C++ SIMD Raycasting Engine
+│   ├── CMakeLists.txt          # Build configuration (AVX2 instructions & pybind11 bindings)
+│   ├── src/
+│   │   ├── bindings.cpp        # pybind11 C++/Python interface
+│   │   ├── raycaster.cpp       # 256-bit AVX2 SIMD 8-lane parallel raycaster implementation
+│   │   └── raycaster.h         # C++ raycaster class interface
+│   └── test_raycaster.py       # Raycaster unit test and validation script
+│
+├── config.yaml                 # Centralized training, network architecture, and environment parameters
+├── requirements.txt            # Python package dependencies
+├── train_rl.py                 # PPO training pipeline supporting single-run and adaptive modes
+├── evaluate_and_record.py      # Quantitative evaluation script saving trajectory plots to results/
+├── run_ablation_study.py       # Ablation matrix executor (entropy, frontier rewards, kinematic noise)
+├── visualize_agent.py          # Real-time Matplotlib environment visualization tool
+├── test_env.py                 # Environment smoke test script
+└── README.md                   # Project documentation
 ```
 
 ---
 
 ## Hyperparameter Configuration (config.yaml)
 
-Training, environment parameters, and neural network sizes are managed in config.yaml. The train_rl.py script automatically loads these parameters:
+Key training, environment parameters, and neural network configurations are defined in `config.yaml` and loaded by `train_rl.py`:
 
-* PPO Hyperparameters: learning_rate (3.0e-4), ent_coef (policy entropy weight: 0.01), n_steps (2048), and batch_size (64).
-* Neural Architecture: Processes continuous mapping features with a custom CNN Branch (16, 32 channels) and poses/lasers with a 1D MLP Branch before projecting to a 256-D fusion layer.
+* **PPO Hyperparameters**: `learning_rate` ($3.0 \times 10^{-4}$), `ent_coef` (policy entropy coefficient: $0.01$), `n_steps` ($2048$), `batch_size` ($64$).
+* **Network Architecture**: 2D occupancy grid maps are processed via a CNN branch ($16$ and $32$ channel layers, $3\times3$ kernels, stride $2$), while pose and LiDAR vectors are processed via a 1D MLP. Features are concatenated into a $256$-dimensional fusion layer prior to policy head projection.
 
 ---
 
 ## Active SLAM Environment Reward Tuning
 
-The reward function inside envs/active_slam_env.py is fully parameterized and customizable. You can adjust the coefficients inside config.yaml or override them dynamically via CLI flags in train_rl.py:
+The reward function in `envs/active_slam_env.py` can be modified via `config.yaml` or overridden through CLI parameters in `train_rl.py`:
 
-* reward_exploration (Default: 1.0): Reward per newly explored grid cell in the occupancy map.
-* reward_time_penalty (Default: 0.01): Penalty applied at every step to encourage rapid exploration.
-* reward_collision_penalty (Default: 0.1): Penalty applied on collision to prevent contact with obstacles.
-* reward_frontier (Default: 0.1): Vectorized frontier attraction reward shaping which guides the robot towards the boundaries of unexplored territory.
+* `reward_exploration` (Default: $1.0$): Linear reward component per newly explored grid cell.
+* `reward_time_penalty` (Default: $0.01$): Per-step penalty encouraging time-efficient mapping.
+* `reward_collision_penalty` (Default: $0.1$): Penalty assigned upon obstacle collision.
+* `reward_frontier` (Default: $0.1$): Vectorized reward component encouraging trajectory alignment toward unexplored map frontiers.
 
 ---
 
 ## Ablation Studies (run_ablation_study.py)
 
-A specialized ablation study suite has been created to analyze hyperparameter sensitivity and sim-to-real transfer:
+An ablation study suite evaluates hyperparameter sensitivity and noise robustness across four primary dimensions:
 
-1. Entropy impact: Compares exploration rate convergence with (--ent-coef 0.01) vs without (--ent-coef 0.0) policy entropy incentives.
-2. Reward Weights Sensitivity: Measures the impact of the frontier exploration shaping reward by comparing a high frontier pull weight (--reward-frontier 0.5) vs none (--reward-frontier 0.0).
-3. Physical Noise Robustness: Analyzes learning under active slippage and sensor drops vs ideal, zero-noise physical kinematics (--no-noise).
-4. Full Matrix Validation: An extended ablation matrix over 14 configurations and 3 random seeds (50,000 steps per run) proves the architectural stability of the 5-layer system. Output graphs with error bars (health score and peak reward) are saved in ablation_eval_full/.
+1. **Policy Entropy Influence**: Compares policy convergence with (`--ent-coef 0.01`) and without (`--ent-coef 0.0`) policy entropy regularizers.
+2. **Frontier Reward Sensitivity**: Evaluates spatial exploration rates with (`--reward-frontier 0.5`) versus without (`--reward-frontier 0.0`) frontier attraction.
+3. **Kinodynamic Noise Sensitivity**: Compares performance under stochastic slippage and beam dropouts versus deterministic kinematic conditions (`--no-noise`).
+4. **Multi-Seed Matrix Evaluation**: Evaluates 14 component configurations across 3 independent random seeds ($50,000$ steps per run) to quantify health score variance and peak reward consistency. Output graphs are saved to `ablation_eval_full/`.
 
 ![Ablation Health Score Stability](ablation_eval_full/ablation_3seed_health_score_errorbars.png)
 ![Ablation Peak Reward Consistency](ablation_eval_full/ablation_3seed_peak_reward_errorbars.png)
 
-### How to Run:
-> [!IMPORTANT]
-> The scripts are fully prepared. Execute them only when you are ready to start training.
+### Execution:
 
-* Run all three ablation tests sequentially (using 50,000 steps per test):
+* **Run all ablation sequences sequentially (50,000 steps per configuration):**
   ```powershell
   py -3.11 run_ablation_study.py --experiment all --steps 50000
   ```
-* Run a single targeted ablation study (e.g., Entropy Impact):
+* **Run a targeted single ablation study (e.g., Policy Entropy):**
   ```powershell
   py -3.11 run_ablation_study.py --experiment entropy --steps 50000
   ```
@@ -217,14 +252,14 @@ A specialized ablation study suite has been created to analyze hyperparameter se
 
 ## Intel Research Lab Real Floorplan Benchmark
 
-To prove the generalization capabilities of the OmniRay PPO agent, it was benchmarked against the classical Yamauchi (1997) Frontier Exploration algorithm on a simulated version of the Intel Research Lab floorplan (a 28m x 28m environment with main corridors and 6 office rooms).
+To assess generalization, the trained policy was benchmarked against Yamauchi's (1997) classical Frontier Exploration algorithm on a $28\,\text{m} \times 28\,\text{m}$ occupancy grid representation of the Intel Research Lab floorplan (comprising main corridors and six office environments).
 
-The 5-layer autonomous system significantly outperforms the classical baseline by producing:
-* Higher exploration efficiency (Coverage per meter traveled).
-* Shorter execution times and trajectory paths.
-* Considerably fewer wall collisions due to learned obstacle avoidance.
+Under identical kinodynamic noise parameters, the learned policy demonstrates:
+* Higher spatial exploration efficiency (coverage grid units per meter traveled).
+* Reduced path length and execution duration.
+* Lower collision frequency compared to passive frontier planning.
 
-The benchmark suite (`scratch/test_on_intel_dataset.py`) generates a comprehensive 4-panel publication visualization comparing the trajectories, map coverage progression, and the final reconstructed occupancy map.
+The evaluation script (`scratch/test_on_intel_dataset.py`) outputs visual analysis panels comparing trajectories, map coverage over time, and reconstructed occupancy maps:
 
 ![Intel Lab Benchmark Report](ablation_eval_full/intel_lab_benchmark_report.png)
 
@@ -232,57 +267,23 @@ The benchmark suite (`scratch/test_on_intel_dataset.py`) generates a comprehensi
 
 ## Architectural Design Rationale & Baseline Justification
 
-### Why 2D Occupancy Grid Representation?
-1. **Computational & Raycasting Efficiency**: Ground-mobile differential drive robots operate primarily on 2D floorplan manifolds. 2D occupancy grid maps ($\mathbb{R}^{H \times W}$) allow AVX2 SIMD raycasting and VectorSLAM particle filtering to execute in under **3.2 ms per step** on standard consumer CPUs, enabling millions of training steps in minutes.
-2. **Spatial Feature Invariance**: 2D grid representations preserve local translational invariance, allowing 2D Convolutional Neural Network (CNN) branches to extract spatial features, room geometries, and unexplored frontier boundaries with high parameter efficiency.
-3. **Avoidance of 3D Memory Overhead**: 3D voxel grids and implicit representations (e.g., NeRFs) scale cubically ($O(N^3)$), introducing computational bottlenecks that severely restrict Deep RL training throughput.
+### 2D Occupancy Grid Representation
+1. **Raycasting & Filter Efficiency**: Ground mobile robots predominantly operate on 2D floorplan manifolds. 2D occupancy maps ($\mathbb{R}^{H \times W}$) allow C++ AVX2 SIMD raycasting and VectorSLAM particle filtering to execute under **3.2 ms per step** on standard CPUs.
+2. **Spatial Feature Representation**: 2D grid representations maintain spatial translational invariance, enabling 2D Convolutional Neural Network (CNN) layers to extract spatial structures and frontier boundaries efficiently.
+3. **Memory & Computational Overhead**: 3D voxel representations scale cubically ($O(N^3)$), introducing memory bandwidth overheads that degrade RL step throughput on resource-constrained platforms.
 
-### Why Yamauchi (1997) as the Baseline?
-1. **Gold-Standard Classical Frontier Benchmark**: Yamauchi's frontier-based exploration is the foundational and most widely cited classical algorithm for autonomous mapping in mobile robotics.
-2. **Robustness Under Physical Noise**: Classical frontier exploration relies on passive SLAM and deterministic shortest-path planning to nearest frontiers. When subjected to continuous wheel slip, yaw drift, and LiDAR dropouts, classical methods suffer severe drift or collisions. Benchmarking against Yamauchi proves that OmniRay's Deep RL policy actively learns noise-compensating trajectories that optimize localization accuracy alongside exploration.
+### Baseline Comparison: Yamauchi (1997)
+1. **Classical Standard**: Yamauchi's frontier exploration remains a widely cited baseline for autonomous spatial exploration in 2D environments.
+2. **Behavior Under Kinodynamic Noise**: Classical frontier methods assume accurate odometry and shortest-path execution to frontier centroids. Under wheel slip, yaw drift, and laser beam dropouts, unmitigated localization errors can lead to boundary oscillations or collisions. Benchmarking against this baseline highlights how active trajectory selection compensates for sensor and actuator noise.
 
 ---
 
 ## Quantitative Benchmark Results (360 Rays)
 
-| Backend | Mean Scan Time | Median Scan Time | P99 Scan Time | 100K Steps Est. | Verdict |
+| Backend Implementation | Mean Scan Time | Median Scan Time | P99 Scan Time | Estimated Time (100K Steps) | Performance Profile |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| **Pure Python** (baseline) | 6.139 ms | 6.469 ms | 7.636 ms | 10.2 min | Extremely slow |
-| **PyMunk segment_query** | 3.009 ms | 3.447 ms | 4.785 ms | 5.0 min | Moderate |
-| **NumPy Vectorized** (batch) | 0.225 ms | 0.262 ms | 0.373 ms | 0.4 min (24s) | Very Fast |
-| **C++ SIMD (AVX2)** | **0.038 ms** | **0.038 ms** | **0.089 ms** | **0.06 min (3.8s)** | **Hyper-Fast (Winner)** |
+| **Pure Python** (Scalar baseline) | 6.139 ms | 6.469 ms | 7.636 ms | 10.2 min | High Latency |
+| **PyMunk (`segment_query`)** | 3.009 ms | 3.447 ms | 4.785 ms | 5.0 min | Moderate Latency |
+| **NumPy Vectorized** (Batched) | 0.225 ms | 0.262 ms | 0.373 ms | 0.4 min (24s) | Low Latency |
+| **C++ SIMD (AVX2)** | **0.038 ms** | **0.038 ms** | **0.089 ms** | **0.06 min (3.8s)** | **Lowest Scan Latency** |
 
----
-
-## Getting Started
-
-### 1. Install Dependencies
-Ensure you run this on a Python 3.11 environment (your primary package environment):
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Compile the C++ SIMD Backend
-The active SLAM environment defaults to the compiled C++ SIMD backend (`--backend simd`) for maximum performance. If it is not compiled or fails to load, it will automatically fall back to the NumPy backend.
-
-To compile the C++ SIMD backend:
-```bash
-cd sim
-mkdir build
-cd build
-cmake ..
-cmake --build . --config Release
-```
-This builds and installs `raycaster_simd` inside the `sim/` directory.
-
-### 3. Run the Bottleneck Profiler
-Benchmark all backends (Pure Python, PyMunk, NumPy, and C++ SIMD) on your CPU and analyze the ray count scaling:
-```bash
-py -3.11 -m profiling.benchmark_bottleneck --rays 360 --iterations 500
-```
-
-### 4. Run the Gym Environment Smoke Test
-Test the Gymnasium active SLAM environment (using the default SIMD backend or NumPy backend) with random agent actions:
-```bash
-py -3.11 test_env.py --backend simd --episodes 3 --max-steps 150
-```
