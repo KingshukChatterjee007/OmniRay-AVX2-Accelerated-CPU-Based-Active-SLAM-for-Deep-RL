@@ -1,4 +1,4 @@
-# OmniRay: AVX2-Accelerated Deep RL Spatial Discovery Engine
+# OmniRay-AVX2-SLAM-CPU-Based-Autonomous-Model
 
 A high-performance, pluggable raycasting engine, parallelized particle filter, and Gymnasium environment designed for training Deep Reinforcement Learning agents on Active SLAM, spatial discovery, and autonomous exploration tasks.
 
