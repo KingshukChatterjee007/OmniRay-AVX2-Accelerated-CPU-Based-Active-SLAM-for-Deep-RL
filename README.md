@@ -27,7 +27,58 @@ OmniRay proposes a configuration-driven, hyper-accelerated active SLAM engine th
 
 Here is the horizontal data-flow architecture of the OmniRay Active SLAM Deep RL system:
 
-![OmniRay Architecture Diagram](assets/architecture_horizontal.png)
+```mermaid
+flowchart LR
+    %% Custom Styling
+    classDef obs fill:#1e1e2f,stroke:#4a4a6a,stroke-width:2px,color:#fff,rx:8px,ry:8px
+    classDef network fill:#1e1e2f,stroke:#7b61ff,stroke-width:2px,color:#fff,rx:8px,ry:8px
+    classDef fusion fill:#1e1e2f,stroke:#00e5ff,stroke-width:2px,color:#fff,rx:8px,ry:8px
+    classDef policy fill:#1e1e2f,stroke:#ff3366,stroke-width:2px,color:#fff,rx:8px,ry:8px
+    classDef noise fill:#1e1e2f,stroke:#ffb703,stroke-width:1px,color:#fff,rx:4px,ry:4px
+
+    subgraph Observations [State Observations]
+        direction TB
+        C[2D Coverage Map]:::obs
+        S[2D SLAM Map]:::obs
+        L[1D LiDAR Sweep]:::obs
+        P[1D Robot Poses]:::obs
+    end
+
+    subgraph Networks [Neural Network Encoders]
+        direction TB
+        CNN[2D CNN Branch]:::network
+        MLP[1D MLP Branch]:::network
+    end
+
+    F[Concatenated Fusion Layer<br/>256-D]:::fusion
+    
+    ActorCritic[PPO Actor-Critic<br/>Policy Network]:::policy
+
+    subgraph Sim [Active SLAM Sim Environment]
+        direction TB
+        W[Physical Wheel Slip]:::noise
+        N[LiDAR Gaussian Noise]:::noise
+    end
+
+    %% Wiring
+    C --> CNN
+    S --> CNN
+    L --> MLP
+    P --> MLP
+    
+    CNN --> F
+    MLP --> F
+    
+    F --> ActorCritic
+    
+    ActorCritic -- "Navigation Actions<br/>(Linear & Angular Velocity)" --> Sim
+    
+    Sim -. "Feedback Loop" .-> Observations
+    
+    style Observations fill:none,stroke:none
+    style Networks fill:none,stroke:none
+    style Sim fill:#151522,stroke:#ffb703,stroke-width:2px,stroke-dasharray: 5 5,rx:12px,ry:12px
+```
 
 ---
 
@@ -51,7 +102,6 @@ OmniRay/
 ├── ablation_eval_full/         # Plots and errorbar graphs from the 3-seed, 14-config ablation matrix
 │
 ├── assets/
-│   └── architecture_horizontal.png   # Horizontal flow diagram of the active SLAM system
 │
 ├── envs/
 │   ├── __init__.py
@@ -193,9 +243,6 @@ A specialized ablation study suite has been created to analyze hyperparameter se
 3. Physical Noise Robustness: Analyzes learning under active slippage and sensor drops vs ideal, zero-noise physical kinematics (--no-noise).
 4. Full Matrix Validation: An extended ablation matrix over 14 configurations and 3 random seeds (50,000 steps per run) proves the architectural stability of the 5-layer system. Output graphs with error bars (health score and peak reward) are saved in ablation_eval_full/.
 
-![Ablation Health Score Stability](ablation_eval_full/ablation_3seed_health_score_errorbars.png)
-![Ablation Peak Reward Consistency](ablation_eval_full/ablation_3seed_peak_reward_errorbars.png)
-
 ### How to Run:
 > [!IMPORTANT]
 > The scripts are fully prepared. Execute them only when you are ready to start training.
@@ -221,8 +268,6 @@ The 5-layer autonomous system significantly outperforms the classical baseline b
 * Considerably fewer wall collisions due to learned obstacle avoidance.
 
 The benchmark suite (`scratch/test_on_intel_dataset.py`) generates a comprehensive 4-panel publication visualization comparing the trajectories, map coverage progression, and the final reconstructed occupancy map.
-
-![Intel Lab Benchmark Results](ablation_eval_full/intel_lab_benchmark_report.png)
 
 ---
 
