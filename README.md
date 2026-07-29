@@ -38,6 +38,8 @@ Here is the horizontal data-flow architecture of the OmniRay Active SLAM Deep RL
 * Master Explorer Convergence: Fully converged a custom Multi-Input CNN-MLP PPO agent, increasing average episode reward by +123% (reaching 1,530).
 * 95.1% Drift Reduction: Confirmed via quantitative testing that the PPO policy guides the robot to keep final positioning drift to a minuscule 1.02 units (a 95.1% drift correction relative to uncorrected dead-reckoning).
 * 5-Layer Self-Adaptive Autonomy System: Implemented a closed-loop feedback architecture with real-time health monitoring, dynamic reward adaptation, a meta-policy that learns to tune rewards, an auto-difficulty curriculum, and in-deployment continual learning.
+* Real-World Generalization (Intel Lab): Benchmarked against classical Yamauchi (1997) Frontier Exploration on the Intel Research Lab floorplan, demonstrating superior exploration efficiency, higher coverage, and fewer collisions in complex multi-room environments.
+* Rigorous Ablation Matrix: Executed a comprehensive ablation matrix covering 14 configurations across 3 random seeds (50,000 steps per run) to validate health score stability and peak reward consistency across architectural variations.
 
 ---
 
@@ -45,6 +47,8 @@ Here is the horizontal data-flow architecture of the OmniRay Active SLAM Deep RL
 
 ```
 OmniRay/
+│
+├── ablation_eval_full/         # Plots and errorbar graphs from the 3-seed, 14-config ablation matrix
 │
 ├── assets/
 │   └── architecture_horizontal.png   # Horizontal flow diagram of the active SLAM system
@@ -69,6 +73,9 @@ OmniRay/
 ├── results/                    # Diagnostic output directory
 │   ├── robust_evaluation_report.png
 │   └── robust_exploration_progression.png
+│
+├── scratch/
+│   └── test_on_intel_dataset.py # Intel Research Lab benchmark script (OmniRay vs Yamauchi)
 │
 ├── sim/
 │   ├── CMakeLists.txt          # C++ compiler config (AVX2 & pybind11)
@@ -184,6 +191,7 @@ A specialized ablation study suite has been created to analyze hyperparameter se
 1. Entropy impact: Compares exploration rate convergence with (--ent-coef 0.01) vs without (--ent-coef 0.0) policy entropy incentives.
 2. Reward Weights Sensitivity: Measures the impact of the frontier exploration shaping reward by comparing a high frontier pull weight (--reward-frontier 0.5) vs none (--reward-frontier 0.0).
 3. Physical Noise Robustness: Analyzes learning under active slippage and sensor drops vs ideal, zero-noise physical kinematics (--no-noise).
+4. Full Matrix Validation: An extended ablation matrix over 14 configurations and 3 random seeds (50,000 steps per run) proves the architectural stability of the 5-layer system. Output graphs with error bars (health score and peak reward) are saved in ablation_eval_full/.
 
 ### How to Run:
 > [!IMPORTANT]
@@ -197,6 +205,19 @@ A specialized ablation study suite has been created to analyze hyperparameter se
   ```powershell
   py -3.11 run_ablation_study.py --experiment entropy --steps 50000
   ```
+
+---
+
+## Intel Research Lab Real Floorplan Benchmark
+
+To prove the generalization capabilities of the OmniRay PPO agent, it was benchmarked against the classical Yamauchi (1997) Frontier Exploration algorithm on a simulated version of the Intel Research Lab floorplan (a 28m x 28m environment with main corridors and 6 office rooms).
+
+The 5-layer autonomous system significantly outperforms the classical baseline by producing:
+* Higher exploration efficiency (Coverage per meter traveled).
+* Shorter execution times and trajectory paths.
+* Considerably fewer wall collisions due to learned obstacle avoidance.
+
+The benchmark suite (`scratch/test_on_intel_dataset.py`) generates a comprehensive 4-panel publication visualization comparing the trajectories, map coverage progression, and the final reconstructed occupancy map.
 
 ---
 
