@@ -22,21 +22,37 @@ A high-performance, pluggable raycasting engine, parallelized particle filter, a
 
 ## What is OmniRay? (Project Overview & Purpose)
 
-OmniRay is an advanced research testbed designed to address the Active SLAM (Simultaneous Localization and Mapping) problem in mobile robotics using Deep Reinforcement Learning (Deep RL).
+OmniRay is a modular, CPU-accelerated research framework for Active SLAM (Simultaneous Localization and Mapping), autonomous exploration, and Deep Reinforcement Learning. It combines an AVX2 SIMD raycasting engine, a vectorized particle filter, and a Gymnasium-compatible environment into a reproducible platform for developing and benchmarking active perception algorithms on commodity hardware.
+
+### Project Motivation
+
+Training reinforcement learning agents for Active SLAM is computationally demanding, with raycasting and particle filtering often becoming the primary simulation bottlenecks. Many existing research platforms rely on GPU acceleration or high-end workstations, limiting accessibility and reproducibility.
+
+OmniRay was developed to investigate whether efficient systems engineering, AVX2 SIMD acceleration, and CPU-first optimization could provide a practical alternative while maintaining realistic simulation fidelity and reinforcement learning performance.
+
+The project was developed, trained, and evaluated on an **ASUS Zenbook S13 OLED** (Intel Core i7-1355U, 16 GB LPDDR5-5200, Intel Iris Xe Graphics, no dedicated GPU). Rather than treating this hardware constraint as a limitation, OmniRay embraces it as a design objective, demonstrating that efficient Active SLAM research can be conducted on widely accessible consumer hardware.
+
 
 ### Problem Statement
+
 In traditional robotics, SLAM is often passive: the robot relies on human teleoperation or pre-calculated static path-planners, and the SLAM module maps whatever sensors detect. This can result in degraded exploration efficiency, localization drift under feature-sparse environments, or mapping divergence when encountering wheel slip and non-Gaussian actuator noise.
 
-Furthermore, training deep reinforcement learning agents directly in realistic physics simulators or on physical hardware presents high computational overhead. Sensor raycasting (simulating LiDAR sweeps) and scan-matching (updating particle filters) frequently create processing bottlenecks that restrict RL throughput.
-
-### Proposed Solution
-OmniRay provides a configuration-driven, CPU-accelerated active SLAM engine designed to address these challenges through:
+Furthermore, training deep reinforcement learning agents directly in realistic physics simulators or on physical hardware presents high computational overhead. Sensor raycasting (simulating LiDAR sweeps) and scan-matching (updating particle filters) frequently create processing bottlenecks that restric
+ted active SLAM engine designed to address these challenges through:
 
 1. **Active Mapping via Deep RL**: Rather than relying on static paths, a Proximal Policy Optimization (PPO) agent uses a multi-input CNN-MLP fusion architecture to select navigation velocities dynamically balancing spatial exploration (frontier attraction shaping) and localization accuracy (mitigating particle filter pose drift).
 2. **AVX2 SIMD & Vectorized Acceleration**: By leveraging 256-bit SIMD vector instructions in C++ and loop-free vectorized operations in NumPy, the raycaster and VectorSLAM particle filter execute at low per-step latencies (under 3.2 ms per simulation step), enabling RL training on consumer CPUs.
 3. **Sim-to-Real Noise Formulation**: Embeds continuous kinodynamic tire slippage, yaw drift, LiDAR distance noise, and random laser dropouts into the training loop, training the agent to prefer trajectories that preserve scan matching accuracy while mitigating localization drift.
 
 ---
+
+### Proposed Solution
+
+OmniRay addresses these challenges through:
+
+1. **Active Mapping via Deep RL**...
+2. **AVX2 SIMD & Vectorized Acceleration**...
+3. **Sim-to-Real Noise Formulation**...
 
 ## System Architecture
 
