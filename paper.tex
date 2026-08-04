@@ -353,7 +353,7 @@ To evaluate benchmark coverage independently of visual demo quality, Table~\ref{
 
 \begin{table}[H]
 \centering
-\small
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{lcccccc}
 \toprule
 \textbf{Sequence / Environment} & \textbf{ATE RMSE} & \textbf{Loop Closure} & \textbf{Peak RAM} & \textbf{Scalar CPU} & \textbf{AVX2 SIMD} & \textbf{Hardware} \\
@@ -365,25 +365,26 @@ To evaluate benchmark coverage independently of visual demo quality, Table~\ref{
 \midrule
 \textbf{Holdout Set: ACES (UT Austin)} & $0.064$ & $1$ & $62.1$ & $1,680$ & $\mathbf{61.2}$ & $27.5\times$ \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \caption{\textbf{Quantitative Multi-Sequence \& Hardware Benchmark:} Absolute Trajectory Error (ATE RMSE in meters), loop-closure failures, memory footprint, and CPU raycasting latency per scan. AVX2 SIMD yields a consistent $\sim26\times$ computational speedup over the scalar non-SIMD fallback run while preserving mapping accuracy across holdout sequences.}
 \label{tab:multi_sequence}
 \end{table}
 
-\subsection{Head-to-Head Comparison: OmniRay vs. Yamauchi (1997)}
+\subsection{Head-to-Head Comparison: Multi-Model Benchmark}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.95\linewidth]{ablation_eval_full/intel_lab_benchmark_report.png}
-\caption{\textbf{Intel Research Lab Real Floorplan Benchmark:} 4-panel publication report comparing classical Yamauchi (1997) frontier exploration against OmniRay 5-Layer system on the Intel Lab floorplan ($28\,\text{m} \times 28\,\text{m}$). OmniRay achieves $84.52\%$ map coverage with a $93.5\%$ reduction in wall collisions.}
-\label{fig:intel_benchmark}
+\includegraphics[width=0.98\linewidth]{ablation_eval_full/multi_model_intel_benchmark.png}
+\caption{\textbf{Intel Research Lab Multi-Model Benchmark:} Comparative evaluation of Exploration Trajectories and Coverage Progression over 300 simulation steps against classical and learning-based baselines under physical noise.}
+\label{fig:intel_multi_model}
 \end{figure}
 
-We evaluated OmniRay against classical \textbf{Yamauchi (1997) Frontier Exploration} under identical physical noise parameters over 300 simulation steps:
+We evaluated OmniRay against classical and learning-based baselines under identical physical noise parameters over 300 simulation steps:
 
 \begin{table}[H]
 \centering
-\small
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{lcccccc}
 \toprule
 \textbf{Model / Baseline} & \textbf{Coverage} & \textbf{Distance} & \textbf{Coverage / Meter} & \textbf{Raycasting Latency} & \textbf{Peak RAM} & \textbf{Collisions} \\
@@ -396,18 +397,26 @@ Stachniss (2005) & $96.52\%$ & $194.57\,\text{m}$ & $0.4961\,\%/\text{m}$ & $18.
 \midrule
 \textbf{OmniRay (Ours)} & $\mathbf{85.04\%}$ & $572.00\,\text{m}$ & $0.1487\,\%/\text{m}$ & $\mathbf{0.038\,\text{ms}}^\dagger$ & $\mathbf{41.8\,\text{MB}}$ & $\mathbf{14}$ \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \caption{\textbf{Multi-Model Exploration Benchmark on Intel Floorplan:} Comprehensive evaluation across coverage efficiency (\%/m), C++ SIMD raycasting core latency per scan, peak RAM footprint, and collision safety under kinodynamic noise. $^\dagger$Refers specifically to the C++ AVX2 SIMD raycasting kernel latency per scan.}
 \label{tab:baseline}
 \end{table}
 
 \subsection{Zero-Shot Generalization: MIT Stata Center Benchmark}
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\linewidth]{ablation_eval_full/mit_stata_multi_model_benchmark.png}
+\caption{\textbf{MIT Stata Center Zero-Shot Benchmark:} Exploration trajectories and coverage rate progression on the MIT Stata Center dataset (\texttt{MIT dataset.bag}) evaluated zero-shot without policy retraining or hyperparameter tuning.}
+\label{fig:mit_stata_benchmark}
+\end{figure}
+
 To evaluate zero-shot policy transfer across distinct un-tuned floorplan topologies, OmniRay was evaluated without fine-tuning or hyperparameter adjustments on the MIT Stata Center floorplan geometry (\texttt{MIT dataset.bag}):
 
 \begin{table}[H]
 \centering
-\small
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{lcccccc}
 \toprule
 \textbf{Model / Baseline} & \textbf{Coverage} & \textbf{Distance} & \textbf{Coverage / Meter} & \textbf{Raycasting Latency} & \textbf{Peak RAM} & \textbf{Collisions} \\
@@ -420,12 +429,13 @@ Stachniss (2005) & $95.32\%$ & $200.75\,\text{m}$ & $0.4748\,\%/\text{m}$ & $11.
 \midrule
 \textbf{OmniRay (Zero-Shot)} & $\mathbf{81.88\%}$ & $573.90\,\text{m}$ & $0.1427\,\%/\text{m}$ & $\mathbf{0.038\,\text{ms}}^\dagger$ & $\mathbf{41.8\,\text{MB}}$ & $\mathbf{10}$ \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \caption{\textbf{MIT Stata Center Zero-Shot Benchmark Comparison:} Zero-shot evaluation on the MIT Stata Center dataset without policy fine-tuning or environment hyperparameter retuning.}
 \label{tab:mit_stata}
 \end{table}
 
-\paragraph{Cross-Dataset Generalization Gap} Evaluating OmniRay zero-shot on the complex MIT Stata Center atrium topology yields an $81.88\%$ final map coverage compared to $89.16\%$ on the Intel Research Lab floorplan, resulting in a **$7.28$ percentage-point decrease in final map coverage** under zero-shot evaluation without retraining.
+\paragraph{Cross-Dataset Generalization Gap} Evaluating OmniRay zero-shot on the complex MIT Stata Center atrium topology yields an $81.88\%$ final map coverage compared to $89.16\%$ on the Intel Research Lab floorplan, resulting in a 7.28 percentage-point decrease in final map coverage under zero-shot evaluation without retraining.
 
 \subsection{Why Classical Frontiers Fail Under Physical Noise}
 
