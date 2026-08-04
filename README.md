@@ -80,7 +80,7 @@ The closed-loop data-flow architecture of the OmniRay Active SLAM framework is s
 
 ## Reproducibility & Hardware Disclosure
 
-<<<<<<< HEAD
+
 * **AVX2 SIMD & NumPy Spatial Discovery Engine**: Implemented a C++ AVX2 SIMD-accelerated raycaster (`SimdRaycaster`) achieving scan latencies down to **0.038 ms** (a 26× speedup relative to the vectorized NumPy baseline) and a parallelized NumPy particle filter (`VectorSLAM`), executing the full active SLAM environment step under 3.2 ms.
 * **Sim-to-Real Noise Degradation Models**: Integrated continuous kinodynamic wheel slip errors, constant yaw drifts, and non-ideal LiDAR distance noise (with random dropouts) for differential-drive kinematics.
 * **Multi-Input Policy Convergence**: Trained a Multi-Input CNN-MLP PPO policy, increasing average episode reward by +123% (reaching asymptotic evaluation scores of 1,530).
@@ -115,7 +115,7 @@ All training runs, ablation studies, and latency benchmarks reported in this rep
 - **5-Layer Self-Adaptive Autonomy System.** A hierarchical feedback control stack spanning real-time health monitoring, dynamic reward adaptation, a neural meta-policy for reward-weight selection, automated curriculum difficulty scaling, and online continual learning with checkpoint/rollback.
 - **Real-World Floorplan Evaluation.** Benchmarked against classical Yamauchi (1997) Frontier Exploration on the Intel Research Lab floorplan, with higher coverage efficiency, shorter execution paths, and fewer collisions across six office environments plus main corridors.
 - **Multi-Seed Ablation Matrix.** A 14-configuration ablation study executed across 3 random seeds (50,000 steps per run) quantifying health-score stability and peak-reward consistency across component variations.
->>>>>>> 5bb2668171e0f20efe5d96063c8155aae521aa9e
+
 
 ### Sim-to-Real Evaluation & Noise Robustness
 
