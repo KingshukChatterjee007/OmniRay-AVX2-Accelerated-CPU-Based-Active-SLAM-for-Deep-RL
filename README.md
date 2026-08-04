@@ -13,21 +13,6 @@ The system was designed, trained, and evaluated end-to-end on a single consumer 
 ---
 
 ## Table of Contents
-<<<<<<< HEAD
-- [What is OmniRay?](#what-is-omniray-project-overview--purpose)
-- [System Architecture](#system-architecture)
-- [Project Accomplishments & Performance Summary](#project-accomplishments--performance-summary)
-- [Getting Started & Quick Demo](#getting-started--quick-demo)
-- [5-Layer Self-Adaptive Autonomy System](#5-layer-self-adaptive-autonomy-system)
-- [Codebase Structure](#codebase-structure)
-- [Hyperparameter Configuration](#hyperparameter-configuration-configyaml)
-- [Active SLAM Environment Reward Tuning](#active-slam-environment-reward-tuning)
-- [Ablation Studies](#ablation-studies-run_ablation_studypy)
-- [Intel Research Lab Real Floorplan Benchmark](#intel-research-lab-real-floorplan-benchmark)
-- [Architectural Design Rationale & Baseline Justification](#architectural-design-rationale--baseline-justification)
-- [Quantitative Benchmark Results](#quantitative-benchmark-results-360-rays)
-- [Fixed Evaluation Suite & Multi-Sequence Benchmark Coverage](#fixed-evaluation-suite--multi-sequence-benchmark-coverage)
-=======
 
 1. [Motivation & Problem Statement](#1-motivation--problem-statement)
 2. [Proposed Solution](#2-proposed-solution)
@@ -44,7 +29,6 @@ The system was designed, trained, and evaluated end-to-end on a single consumer 
 13. [Architectural Design Rationale](#12-architectural-design-rationale)
 14. [Quantitative Benchmark Results](#13-quantitative-benchmark-results-360-ray-configuration)
 15. [Known Limitations](#14-known-limitations)
->>>>>>> 5bb2668171e0f20efe5d96063c8155aae521aa9e
 
 ---
 
@@ -89,8 +73,6 @@ The closed-loop data-flow architecture of the OmniRay Active SLAM framework is s
 * **Decoupled Qualitative Demo & Quantitative Benchmark Coverage**: Structurally separated qualitative visual demonstration showcases from fixed quantitative benchmark evaluation suites.
 * **Fixed Evaluation Suite & Holdout Generalization**: Standardized evaluation on fixed ground-truth benchmark datasets (Intel Research Lab, MIT Stata Center, Freiburg Building 52) while establishing the ACES Building (UT Austin) as a strict unseen holdout set.
 * **Real-World Floorplan Evaluation (Intel Lab)**: Evaluated against classical Yamauchi (1997) Frontier Exploration on the Intel Research Lab floorplan, achieving higher coverage efficiency, shorter execution paths, and fewer wall collisions in multi-room environments.
-* **Multi-Seed Ablation Study**: Executed a 14-configuration ablation matrix across 3 random seeds (50,000 steps per run) to measure health score stability and peak reward consistency across component variations.
-=======
 All training runs, ablation studies, and latency benchmarks reported in this repository were produced on a single, fixed hardware configuration. This is stated explicitly because CPU-only performance claims are only meaningful with respect to the hardware they were measured on.
 
 | Component | Specification |
@@ -392,16 +374,16 @@ To separate visual demo quality from quantitative benchmark coverage, OmniRay is
 
 ## Multi-Model Baseline Comparison (Intel Floorplan)
 
-| Model / Algorithm | Coverage (%) | Path Length (m) | Coverage / Meter (%/m) | Step Latency (ms) | Peak RAM (MB) | Collision Count |
+| Model / Algorithm | Coverage (%) | Path Length (m) | Coverage / Meter (%/m) | Decision Latency (ms) | Peak RAM (MB) | Collision Count |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Random Walk** | 65.55 ± 12.52% | 148.57 ± 67.34 m | 0.4411 %/m | 7.16 ms | 34.2 MB | 225.7 ± 33.7 |
 | **Yamauchi (1997)** | 70.85 ± 14.67% | 155.06 ± 64.90 m | 0.4570 %/m | 8.61 ms | 39.5 MB | 192.3 ± 39.9 |
 | **RRT-Exploration (2017)** | 85.55 ± 13.57% | 267.64 ± 33.16 m | 0.3200 %/m | 10.49 ms | 44.8 MB | 30.7 ± 28.2 |
 | **Stachniss (2005)** | 95.43 ± 0.07% | 207.65 ± 22.06 m | 0.4600 %/m | 18.51 ms | 52.1 MB | **0.0 ± 0.0** |
-| **OmniRay (Ours)** | **90.87 ± 3.29%** | **418.12 ± 106.25 m** | **0.2172 %/m** | **0.038 ms** (SIMD) | **41.8 MB** | **62.3 ± 46.5** |
+| **OmniRay (Ours)** | **90.87 ± 3.29%** | **418.12 ± 106.25 m** | **0.2172 %/m** | **3.09 ms**† | **41.8 MB** | **62.3 ± 46.5** |
 
 * **Coverage Efficiency (`Coverage / Meter`)**: Quantifies map discovery gain per meter traveled. While OmniRay maintains continuous motion sweeps covering longer paths, its rapid initial sweep achieves 85%+ map coverage in under 110 steps.
-* **CPU First Performance Profile**: Highlights OmniRay's ultra-low raycasting core latency (**0.038 ms**) and lightweight memory footprint (**41.8 MB**), suitable for low-power edge robotics.
+* **CPU First Performance Profile**: Highlights OmniRay's low policy decision latency (**3.09 ms**, with full localization/mapping loop at 10.02 ms and C++ AVX2 SIMD raycasting core scan latency of **0.038 ms**) and lightweight memory footprint (**41.8 MB**), suitable for low-power edge robotics.
 
 ---
 
@@ -409,13 +391,13 @@ To separate visual demo quality from quantitative benchmark coverage, OmniRay is
 
 Evaluated on the **MIT Stata Center dataset (`MIT dataset.bag`)** with an **unchanged OmniRay model** (zero hyperparameter tuning specifically for MIT):
 
-| Model / Algorithm | Coverage (%) | Path Length (m) | Coverage / Meter (%/m) | Step Latency (ms) | Peak RAM (MB) | Collision Count |
+| Model / Algorithm | Coverage (%) | Path Length (m) | Coverage / Meter (%/m) | Decision Latency (ms) | Peak RAM (MB) | Collision Count |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Random Walk** | 59.81 ± 19.40% | 140.14 ± 96.38 m | 0.4268 %/m | 7.10 ms | 35.1 MB | 230.0 ± 48.3 |
 | **Yamauchi (1997)** | 91.04 ± 4.40% | 281.62 ± 37.18 m | 0.3233 %/m | 10.29 ms | 41.2 MB | 28.3 ± 20.5 |
 | **RRT-Exploration (2017)** | 95.08 ± 0.07% | 260.61 ± 2.99 m | 0.3649 %/m | 10.77 ms | 46.5 MB | 35.0 ± 4.5 |
 | **Stachniss (2005)** | 95.33 ± 0.36% | 205.22 ± 8.51 m | 0.4654 %/m | 11.96 ms | 53.8 MB | **1.7 ± 2.4** |
-| **OmniRay (Ours - Zero Shot)**| **91.08 ± 3.99%** | **454.34 ± 108.03 m** | **0.2005 %/m** | **0.038 ms** (SIMD) | **41.8 MB** | **70.3 ± 53.6** |
+| **OmniRay (Ours - Zero Shot)**| **91.08 ± 3.99%** | **454.34 ± 108.03 m** | **0.2005 %/m** | **3.09 ms**† | **41.8 MB** | **70.3 ± 53.6** |
 
 * **Zero-Shot Generalization**: Shows that without retraining or fine-tuning, OmniRay transfers directly to complex unseen floorplan topologies, rapidly sweeping **80%+ map coverage within ~95 steps**.
 
@@ -428,7 +410,7 @@ Evaluated on the **MIT Stata Center dataset (`MIT dataset.bag`)** with an **unch
 | **Intel Research Lab (Seattle)** | Fixed Training / Benchmark Floorplan | 90.87 ± 3.29% | Baseline reference |
 | **MIT Stata Center (`MIT dataset.bag`)** | Unseen Complex Atrium Holdout | 91.08 ± 3.99% | **+0.21%** |
 
-* **Analysis**: Demonstrates policy transfer performance across distinct building topologies, resulting in a slight **+0.21 percentage-point increase in mean final map coverage** under zero-shot evaluation without retraining, demonstrating exceptionally robust zero-shot generalisation across unseen topologies.
+* **Analysis**: Demonstrates policy transfer performance across distinct building topologies. The +0.21 percentage-point gap is well within one standard deviation of both measurements, indicating that the generalization gap is within the noise margin and confirming direct transfer without performance degradation.
 
 
 ---
