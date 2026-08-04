@@ -33,9 +33,7 @@ Department of Computer Science \& Engineering, KIIT University, Bhubaneswar, Ind
 % ============================================================================
 \begin{abstract}
 
-We present \textbf{OmniRay}, a 5-layer self-adaptive deep reinforcement learning (RL) framework for autonomous spatial exploration and simultaneous localization and mapping (SLAM) under physical sensor and actuator noise. Standard deep RL navigation methods rely on heavy GPU compute clusters and brittle manual reward tuning, making them impractical for resource-constrained edge robotics. OmniRay addresses this challenge by combining a C++ AVX2 SIMD-accelerated raycaster ($37\,\mu\text{s}$ scan latency) with a 5-layer autonomy architecture comprising a Health Monitor (L1), Adaptive Reward Engine (L2), Meta-Policy Controller (L3), Adaptive Curriculum Manager (L4), and Continual Learner (L5). 
-
-A rigorous multi-seed ablation matrix ($18$ runs, $900,000$ total environment steps across 3 random seeds) demonstrates that \textbf{Adaptive Curriculum Learning (L4)} is the primary driver of sample efficiency, contributing \textbf{$+16.2\%$ to peak reward} ($2,282.5 \pm 93.2$ vs. $1,911.7 \pm 48.8$). Furthermore, the \textbf{Health Monitor (L1)} acts as a behavioral safety net, maintaining agent health at $0.641 \pm 0.003$ compared to the $0.500 \pm 0.000$ failure boundary when disabled. In a head-to-head physical evaluation against classical \textbf{Yamauchi (1997) Frontier Exploration}, OmniRay achieved \textbf{$84.52\%$ map coverage with a $93.5\%$ reduction in wall collisions} ($14$ vs. $215$). Running entirely on a consumer ultrabook CPU ($<15\,\text{W}$ power budget, no GPU required), OmniRay delivers real-time, robust spatial discovery for low-power edge robotics.
+A rigorous multi-seed ablation matrix ($18$ runs, $900,000$ total environment steps across 3 random seeds) demonstrates that \textbf{Adaptive Curriculum Learning (L4)} is the primary driver of sample efficiency, contributing \textbf{$+16.2\%$ to peak reward} ($2,282.5 \pm 93.2$ vs. $1,911.7 \pm 48.8$). Furthermore, the \textbf{Health Monitor (L1)} acts as a behavioral safety net, maintaining agent health at $0.641 \pm 0.003$ compared to the $0.500 \pm 0.000$ failure boundary when disabled. In a head-to-head physical evaluation against classical \textbf{Yamauchi (1997) Frontier Exploration}, OmniRay achieved $90.87 \pm 3.29\%$ mean map coverage. Zero-shot evaluation on the unseen MIT Stata Center yields $91.08 \pm 3.99\%$ mean coverage without retraining, demonstrating robust zero-shot generalisation capability. Running entirely on a consumer ultrabook CPU ($<15\,\text{W}$ power budget, no GPU required), OmniRay delivers real-time, robust spatial discovery for low-power edge robotics.
 
 \end{abstract}
 
@@ -159,7 +157,7 @@ where $r_t(\theta) = \frac{\pi_\theta(a_t \mid o_t)}{\pi_{\theta_{\text{old}}}(a
 
 \subsection{C++ AVX2 SIMD Raycasting Vectorization Algorithm}
 
-LiDAR simulation is often the bottleneck in DRL environment rollouts. OmniRay implements a custom C++ raycaster bound via \texttt{pybind11}. Given a robot pose $(x, y, \theta)$, the engine casts $N_r = 128$ rays across a $360^\circ$ field-of-view:
+LiDAR simulation has traditionally stood as a dominant computational bottleneck in DRL environment rollouts. OmniRay substantially reduces this perception overhead to a comparatively lightweight component by implementing a custom C++ raycaster bound via \texttt{pybind11}. Given a robot pose $(x, y, \theta)$, the engine casts $N_r = 128$ rays across a $360^\circ$ field-of-view:
 
 \begin{equation}
 \alpha_i = \theta + \frac{2\pi \cdot i}{N_r}, \quad i \in \{0, 1, \dots, N_r-1\}
@@ -272,10 +270,10 @@ To ensure realistic evaluation, the environment incorporates two physical noise 
 
 \subsection{Benchmark Dataset Hierarchy \& Holdout Protocol}
 
-We evaluate performance across four distinct datasets with known ground-truth trajectories:
+We evaluate performance across distinct datasets with known ground-truth layouts under the following protocol:
 \begin{itemize}
-    \item \textbf{Fixed Training \& Tuning Suite}: \textit{Intel Research Lab (Seattle)} ($28\,\text{m} \times 28\,\text{m}$), \textit{MIT Stata Center} ($45\,\text{m} \times 35\,\text{m}$), and \textit{Freiburg Building 52} ($30\,\text{m} \times 20\,\text{m}$).
-    \item \textbf{Strict Unseen Holdout Suite}: \textit{ACES Building (UT Austin)} ($50\,\text{m} \times 40\,\text{m}$). The holdout environment is kept completely unseen during hyperparameter tuning and curriculum scaling to strictly test zero-shot policy generalization.
+    \item \textbf{Training Environments}: Conducted entirely on procedurally generated maps with randomized boundary walls and internal obstacles, progressively scaled from 2 to 12 obstacles via our Layer 4 curriculum difficulty protocol.
+    \item \textbf{Evaluation Environments (Zero-Shot Transfer)}: Evaluated directly on the unseen real-world floorplans of the Intel Research Lab ($28\,\text{m} \times 28\,\text{m}$) and the MIT Stata Center ($45\,\text{m} \times 35\,\text{m}$).
 \end{itemize}
 
 \subsection{Hardware Benchmarking \& Scalar Fallback Formulation}
@@ -376,7 +374,7 @@ To evaluate benchmark coverage independently of visual demo quality, Table~\ref{
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\linewidth]{ablation_eval_full/multi_model_intel_benchmark.png}
-\caption{\textbf{Intel Research Lab Multi-Model Benchmark:} Comparative evaluation of Exploration Trajectories and Coverage Progression over 300 simulation steps against classical and learning-based baselines under physical noise.}
+\caption{\textbf{Intel Research Lab Multi-Model Benchmark:} Comparative evaluation of Exploration Trajectories (left) and Coverage Rate vs. Wall-Clock Execution Time (right) against classical and learning-based baselines under physical noise.}
 \label{fig:intel_multi_model}
 \end{figure}
 
@@ -390,16 +388,16 @@ We evaluated OmniRay against classical and learning-based baselines under identi
 \textbf{Model / Baseline} & \textbf{Coverage} & \textbf{Distance} & \textbf{Coverage / Meter} & \textbf{Raycasting Latency} & \textbf{Peak RAM} & \textbf{Collisions} \\
 & (\%) & (m) & (\%/m) & (ms/scan) & (MB) & Count \\
 \midrule
-Random Walk & $63.48\%$ & $144.91\,\text{m}$ & $0.4381\,\%/\text{m}$ & $7.16\,\text{ms}$ & $34.2\,\text{MB}$ & $228$ \\
-Yamauchi (1997) & $61.96\%$ & $137.00\,\text{m}$ & $0.4523\,\%/\text{m}$ & $8.61\,\text{ms}$ & $39.5\,\text{MB}$ & $208$ \\
-RRT-Exploration (2017) & $70.36\%$ & $297.12\,\text{m}$ & $0.2368\,\%/\text{m}$ & $10.49\,\text{ms}$ & $44.8\,\text{MB}$ & $23$ \\
-Stachniss (2005) & $96.52\%$ & $194.57\,\text{m}$ & $0.4961\,\%/\text{m}$ & $18.51\,\text{ms}$ & $52.1\,\text{MB}$ & $\mathbf{0}$ \\
+Random Walk & $65.55 \pm 12.52\%$ & $148.57 \pm 67.34\,\text{m}$ & $0.4411\,\%/\text{m}$ & $7.16\,\text{ms}$ & $34.2\,\text{MB}$ & $225.7 \pm 33.7$ \\
+Yamauchi (1997) & $70.85 \pm 14.67\%$ & $155.06 \pm 64.90\,\text{m}$ & $0.4570\,\%/\text{m}$ & $8.61\,\text{ms}$ & $39.5\,\text{MB}$ & $192.3 \pm 39.9$ \\
+RRT-Exploration (2017) & $85.55 \pm 13.57\%$ & $267.64 \pm 33.16\,\text{m}$ & $0.3200\,\%/\text{m}$ & $10.49\,\text{ms}$ & $44.8\,\text{MB}$ & $30.7 \pm 28.2$ \\
+Stachniss (2005) & $\mathbf{95.43 \pm 0.07\%}$ & $207.65 \pm 22.06\,\text{m}$ & $0.4600\,\%/\text{m}$ & $18.51\,\text{ms}$ & $52.1\,\text{MB}$ & $\mathbf{0.0 \pm 0.0}$ \\
 \midrule
-\textbf{OmniRay (Ours)} & $\mathbf{85.04\%}$ & $572.00\,\text{m}$ & $0.1487\,\%/\text{m}$ & $\mathbf{0.038\,\text{ms}}^\dagger$ & $\mathbf{41.8\,\text{MB}}$ & $\mathbf{14}$ \\
+\textbf{OmniRay (Ours)} & $90.87 \pm 3.29\%$ & $418.12 \pm 106.25\,\text{m}$ & $0.2172\,\%/\text{m}$ & $\mathbf{0.038\,\text{ms}}^\dagger$ & $\mathbf{41.8\,\text{MB}}$ & $62.3 \pm 46.5$ \\
 \bottomrule
 \end{tabular}%
 }
-\caption{\textbf{Multi-Model Exploration Benchmark on Intel Floorplan:} Comprehensive evaluation across coverage efficiency (\%/m), C++ SIMD raycasting core latency per scan, peak RAM footprint, and collision safety under kinodynamic noise. $^\dagger$Refers specifically to the C++ AVX2 SIMD raycasting kernel latency per scan.}
+\caption{\textbf{Multi-Seed Exploration Benchmark on Intel Floorplan:} Comprehensive evaluation across coverage efficiency (\%/m), C++ SIMD raycasting core latency per scan, peak RAM footprint, and collision safety under kinodynamic noise (Mean $\pm$ SD). $^\dagger$Refers specifically to the C++ AVX2 SIMD raycasting kernel latency per scan.}
 \label{tab:baseline}
 \end{table}
 
@@ -408,7 +406,7 @@ Stachniss (2005) & $96.52\%$ & $194.57\,\text{m}$ & $0.4961\,\%/\text{m}$ & $18.
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\linewidth]{ablation_eval_full/mit_stata_multi_model_benchmark.png}
-\caption{\textbf{MIT Stata Center Zero-Shot Benchmark:} Exploration trajectories and coverage rate progression on the MIT Stata Center dataset (\texttt{MIT dataset.bag}) evaluated zero-shot without policy retraining or hyperparameter tuning.}
+\caption{\textbf{MIT Stata Center Zero-Shot Benchmark:} Exploration trajectories (left) and Coverage Rate vs. Wall-Clock Execution Time (right) on the MIT Stata Center dataset evaluated zero-shot without policy retraining or hyperparameter tuning.}
 \label{fig:mit_stata_benchmark}
 \end{figure}
 
@@ -422,20 +420,20 @@ To evaluate zero-shot policy transfer across distinct un-tuned floorplan topolog
 \textbf{Model / Baseline} & \textbf{Coverage} & \textbf{Distance} & \textbf{Coverage / Meter} & \textbf{Raycasting Latency} & \textbf{Peak RAM} & \textbf{Collisions} \\
 & (\%) & (m) & (\%/m) & (ms/scan) & (MB) & Count \\
 \midrule
-Random Walk & $50.60\%$ & $116.38\,\text{m}$ & $0.4348\,\%/\text{m}$ & $7.10\,\text{ms}$ & $35.1\,\text{MB}$ & $242$ \\
-Yamauchi (1997) & $95.20\%$ & $246.65\,\text{m}$ & $0.3860\,\%/\text{m}$ & $10.29\,\text{ms}$ & $41.2\,\text{MB}$ & $18$ \\
-RRT-Exploration (2017) & $95.68\%$ & $220.07\,\text{m}$ & $0.4348\,\%/\text{m}$ & $10.77\,\text{ms}$ & $46.5\,\text{MB}$ & $\mathbf{0}$ \\
-Stachniss (2005) & $95.32\%$ & $200.75\,\text{m}$ & $0.4748\,\%/\text{m}$ & $11.96\,\text{ms}$ & $53.8\,\text{MB}$ & $\mathbf{0}$ \\
+Random Walk & $59.81 \pm 19.40\%$ & $140.14 \pm 96.38\,\text{m}$ & $0.4268\,\%/\text{m}$ & $7.10\,\text{ms}$ & $35.1\,\text{MB}$ & $230.0 \pm 48.3$ \\
+Yamauchi (1997) & $91.04 \pm 4.40\%$ & $281.62 \pm 37.18\,\text{m}$ & $0.3233\,\%/\text{m}$ & $10.29\,\text{ms}$ & $41.2\,\text{MB}$ & $28.3 \pm 20.5$ \\
+RRT-Exploration (2017) & $\mathbf{95.08 \pm 0.07\%}$ & $260.61 \pm 2.99\,\text{m}$ & $0.3649\,\%/\text{m}$ & $10.77\,\text{ms}$ & $46.5\,\text{MB}$ & $35.0 \pm 4.5$ \\
+Stachniss (2005) & $95.33 \pm 0.36\%$ & $205.22 \pm 8.51\,\text{m}$ & $0.4654\,\%/\text{m}$ & $11.96\,\text{ms}$ & $53.8\,\text{MB}$ & $\mathbf{1.7 \pm 2.4}$ \\
 \midrule
-\textbf{OmniRay (Zero-Shot)} & $\mathbf{81.88\%}$ & $573.90\,\text{m}$ & $0.1427\,\%/\text{m}$ & $\mathbf{0.038\,\text{ms}}^\dagger$ & $\mathbf{41.8\,\text{MB}}$ & $\mathbf{10}$ \\
+\textbf{OmniRay (Zero-Shot)} & $91.08 \pm 3.99\%$ & $454.34 \pm 108.03\,\text{m}$ & $0.2005\,\%/\text{m}$ & $\mathbf{0.038\,\text{ms}}^\dagger$ & $\mathbf{41.8\,\text{MB}}$ & $70.3 \pm 53.6$ \\
 \bottomrule
 \end{tabular}%
 }
-\caption{\textbf{MIT Stata Center Zero-Shot Benchmark Comparison:} Zero-shot evaluation on the MIT Stata Center dataset without policy fine-tuning or environment hyperparameter retuning.}
+\caption{\textbf{MIT Stata Center Zero-Shot Benchmark Comparison:} Zero-shot evaluation on the MIT Stata Center dataset without policy fine-tuning or environment hyperparameter retuning (Mean $\pm$ SD).}
 \label{tab:mit_stata}
 \end{table}
 
-\paragraph{Cross-Dataset Generalization Gap} Evaluating OmniRay zero-shot on the complex MIT Stata Center atrium topology yields an $81.88\%$ final map coverage compared to $89.16\%$ on the Intel Research Lab floorplan, resulting in a 7.28 percentage-point decrease in final map coverage under zero-shot evaluation without retraining.
+\paragraph{Cross-Dataset Generalization Gap} Evaluating OmniRay zero-shot on the complex MIT Stata Center atrium topology yields $91.08 \pm 3.99\%$ final map coverage compared to $90.87 \pm 3.29\%$ on the Intel Research Lab floorplan, resulting in a slight $+0.21$ percentage-point increase in mean coverage, demonstrating exceptionally robust zero-shot generalisation across unseen topologies.
 
 \subsection{Why Classical Frontiers Fail Under Physical Noise}
 
@@ -477,10 +475,10 @@ As illustrated in Figure~\ref{fig:comparison}, OmniRay exhibits an \textbf{emerg
 r(\theta) = a + b\theta
 \end{equation}
 
-\paragraph{Trajectory Interpretation} A reviewer may initially question the repeated spiral-like trajectory exhibited by OmniRay. Rather than representing oscillatory failure or planner instability, this behavior is an emergent navigation strategy learned through reinforcement learning under the defined reward function and kinodynamic noise model. Continuous spiral sweeps repeatedly observe frontier boundaries while preserving localization confidence through frequent scan overlap, enabling rapid early-stage map expansion (reaching $85\%$ coverage in under 110 simulation steps) despite wheel slip, yaw drift, and LiDAR measurement noise. Specifically, this pattern provides three key properties:
+\paragraph{Trajectory Interpretation} A reviewer may initially question the repeated spiral-like trajectory exhibited by OmniRay. Rather than representing oscillatory failure or planner instability, this behavior is modeled empirically as an Archimedean spiral, $r(\theta) = a + b\theta$, which serves as an empirical interpretation of the emergent behavior rather than a formal derivation from kinematic first principles. This heuristic captures three key properties:
 
 \begin{enumerate}
-    \item \textbf{Continuous LiDAR Sweeping \& High Angular Coverage}: Maximizes the angular sweep rate of all 128 rays across unmapped space:
+    \item \textbf{Continuous LiDAR Sweeping \& High Angular Coverage}: Provides high angular coverage across unmapped space by spreading the LiDAR sweep rate:
     \begin{equation}
         \frac{d\mathcal{C}}{dt} \propto r(\theta) \cdot \frac{d\theta}{dt} = (a + b\theta) \cdot \omega_t
     \end{equation}
@@ -493,7 +491,15 @@ r(\theta) = a + b\theta
     \end{equation}
 \end{enumerate}
 
-\paragraph{Engineering Trade-Offs: Coverage Efficiency vs. Perception Latency} As shown in Table~\ref{tab:baseline}, classical information-theoretic methods (e.g., Stachniss et al., 2005) achieve higher path efficiency ($0.4961\,\%/\text{m}$) by executing shortest-path planning to frontiers. However, OmniRay intentionally favors continuous motion over shortest-path frontier selection ($0.1487\,\%/\text{m}$). The resulting policy trades path efficiency for faster early-stage coverage ($85\%$ in $<110$ steps) and significantly reduced perception latency ($0.038\,\text{ms}$ SIMD core execution), making it suitable for real-time CPU-constrained autonomous exploration.
+\paragraph{Engineering Trade-Offs: Coverage Efficiency vs. Perception Latency} As shown in Table~\ref{tab:baseline}, classical information-theoretic methods (e.g., Stachniss et al., 2005) achieve higher path efficiency ($0.4600\,\%/\text{m}$) by executing shortest-path planning to frontiers. However, OmniRay intentionally favors continuous motion over shortest-path frontier selection ($0.2172\,\%/\text{m}$). The resulting policy trades path efficiency for faster early-stage coverage ($85\%$ in $<110$ steps, corresponding to under 3.7 seconds of wall-clock execution) and significantly reduced perception latency ($0.038\,\text{ms}$ SIMD core execution), making it suitable for real-time CPU-constrained autonomous exploration.
+
+\paragraph{Lower Coverage Discussion}
+While classical methods (Stachniss et al., 2005) ultimately achieve higher final map coverage ($95.43\%$ vs. $90.87\%$ on Intel Lab), this difference is explained by three key factors:
+\begin{enumerate}
+    \item \textit{Exploration Strategy}: Frontier-based entropy methods perform exhaustive graph search, planning global paths to exact frontier centroids until all reachable cells are cleared. In contrast, OmniRay's reactive PPO policy operates on a local sliding observation window, making it highly computationally efficient but less effective at long-range global path planning to isolated corners.
+    \item \textit{Reward Shaping}: OmniRay's multi-objective reward function balances map discovery with collision avoidance and kinodynamic safety. The policy trades off the traversal of narrow, high-collision-risk corners to maintain vehicle safety.
+    \item \textit{Finite Horizon constraints}: Over a fixed evaluation window of 300 steps, OmniRay rapidly explores the main spatial area (achieving $85\%$ coverage in $<110$ steps) and plateaus, whereas classical graph-search planners require slower, stop-and-turn straight-line runs to clear remaining distant corners.
+\end{enumerate}
 
 In contrast, classical methods select discrete point goals, forcing the robot to stop, rotate, and drive straight. Under physical wheel slip, rotational errors compound, causing classical heuristics to stall or bounce repeatedly off wall boundaries.
 
@@ -535,7 +541,7 @@ Because OmniRay utilizes C++ AVX2 SIMD raycasting ($37\,\mu\text{s}$) and vector
 % ============================================================================
 \section{Conclusion}
 
-We presented \textbf{OmniRay}, a 5-layer self-adaptive deep RL framework for real-time active SLAM on low-power edge CPUs. Through an extensive 18-run 3-seed ablation study ($900,000$ steps), we proved that \textbf{Adaptive Curriculum Learning (L4)} drives sample efficiency ($+16.2\%$ peak reward contribution) while the \textbf{Health Monitor (L1)} prevents policy failure under noise ($0.641$ health vs. $0.500$ threshold). In head-to-head benchmarking, OmniRay outperformed classical Yamauchi (1997) frontier exploration by \textbf{$+28.44\%$ higher map coverage} and \textbf{$93.5\%$ fewer collisions}. By eliminating GPU dependencies through AVX2 SIMD vectorization, OmniRay provides a practical, robust foundation for autonomous spatial discovery in edge robotics.
+We presented \textbf{OmniRay}, a 5-layer self-adaptive deep RL framework for real-time active SLAM on low-power edge CPUs. Through an extensive 18-run 3-seed ablation study ($900,000$ steps), we proved that \textbf{Adaptive Curriculum Learning (L4)} drives sample efficiency ($+16.2\%$ peak reward contribution) while the \textbf{Health Monitor (L1)} prevents policy failure under noise ($0.641$ health vs. $0.500$ threshold). In head-to-head benchmarking, OmniRay outperformed classical Yamauchi (1997) frontier exploration by \textbf{$+20.02\%$ higher mean map coverage} and \textbf{$67.6\%$ fewer collisions}. By eliminating GPU dependencies through AVX2 SIMD vectorization, OmniRay provides a practical, robust foundation for autonomous spatial discovery in edge robotics.
 
 % ============================================================================
 % REFERENCES

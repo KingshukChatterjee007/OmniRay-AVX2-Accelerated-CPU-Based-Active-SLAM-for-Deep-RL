@@ -1,7 +1,7 @@
 """
-Multi-Model Benchmark Suite on Intel Research Lab Floorplan
-=============================================================
-Evaluates classical and learning-based exploration baselines:
+Multi-Model Benchmark Suite on Intel Research Lab Floorplan (Multi-Seed & Wall-Time version)
+==========================================================================================
+Evaluates classical and learning-based exploration baselines over seeds 42, 43, and 44:
 1. Yamauchi (1997) - Classical Frontier Exploration
 2. Random Walk / Reactive Boundary Follower - Basic Stochastic Baseline
 3. RRT Exploration (Umari & Mukhopadhyay, 2017) - Dynamic Tree Sampling
@@ -12,13 +12,13 @@ Evaluates classical and learning-based exploration baselines:
 import os
 import sys
 import time
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import binary_dilation
 from stable_baselines3 import PPO
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from envs.active_slam_env import ActiveSLAMEnv
 from envs.adaptive_env import AdaptiveActiveSLAMEnv
 
@@ -44,12 +44,13 @@ def get_intel_lab_walls():
     ]
 
 
-def run_yamauchi(env, max_steps=300):
+def run_yamauchi(env, seed, max_steps=300):
     """Yamauchi (1997) Nearest Frontier Baseline."""
-    obs, info = env.reset(seed=42)
+    obs, info = env.reset(seed=seed)
     gt_trajectory, coverage_history = [(env._robot_x, env._robot_y)], [info["coverage"]]
     step_count, total_distance, collisions = 0, 0.0, 0
     start_time = time.time()
+    time_history = [0.0]
 
     while step_count < max_steps:
         grid_map = env.slam.map
@@ -86,18 +87,30 @@ def run_yamauchi(env, max_steps=300):
         total_distance += np.hypot(gt_x - gt_trajectory[-1][0], gt_y - gt_trajectory[-1][1])
         gt_trajectory.append((gt_x, gt_y))
         coverage_history.append(info["coverage"])
+        time_history.append(time.time() - start_time)
         if info.get("collision", False): collisions += 1
         if terminated or truncated: break
         
-    return {"name": "Yamauchi (1997)", "trajectory": np.array(gt_trajectory), "coverage": coverage_history, "final_coverage": coverage_history[-1], "total_distance": total_distance, "collisions": collisions, "steps": step_count, "wall_time": time.time() - start_time}
+    return {
+        "name": "Yamauchi (1997)", 
+        "trajectory": np.array(gt_trajectory), 
+        "coverage": coverage_history, 
+        "final_coverage": coverage_history[-1], 
+        "total_distance": total_distance, 
+        "collisions": collisions, 
+        "steps": step_count, 
+        "wall_time": time.time() - start_time,
+        "time_history": time_history
+    }
 
 
-def run_random_walk(env, max_steps=300):
+def run_random_walk(env, seed, max_steps=300):
     """Random Walk / Reactive Obstacle Avoidance Baseline."""
-    obs, info = env.reset(seed=42)
+    obs, info = env.reset(seed=seed)
     gt_trajectory, coverage_history = [(env._robot_x, env._robot_y)], [info["coverage"]]
     step_count, total_distance, collisions = 0, 0.0, 0
     start_time = time.time()
+    time_history = [0.0]
     curr_steering = 0.0
 
     while step_count < max_steps:
@@ -116,18 +129,30 @@ def run_random_walk(env, max_steps=300):
         total_distance += np.hypot(gt_x - gt_trajectory[-1][0], gt_y - gt_trajectory[-1][1])
         gt_trajectory.append((gt_x, gt_y))
         coverage_history.append(info["coverage"])
+        time_history.append(time.time() - start_time)
         if info.get("collision", False): collisions += 1
         if terminated or truncated: break
         
-    return {"name": "Random Walk", "trajectory": np.array(gt_trajectory), "coverage": coverage_history, "final_coverage": coverage_history[-1], "total_distance": total_distance, "collisions": collisions, "steps": step_count, "wall_time": time.time() - start_time}
+    return {
+        "name": "Random Walk", 
+        "trajectory": np.array(gt_trajectory), 
+        "coverage": coverage_history, 
+        "final_coverage": coverage_history[-1], 
+        "total_distance": total_distance, 
+        "collisions": collisions, 
+        "steps": step_count, 
+        "wall_time": time.time() - start_time,
+        "time_history": time_history
+    }
 
 
-def run_rrt_exploration(env, max_steps=300):
+def run_rrt_exploration(env, seed, max_steps=300):
     """RRT-Exploration Baseline (Umari & Mukhopadhyay, 2017)."""
-    obs, info = env.reset(seed=42)
+    obs, info = env.reset(seed=seed)
     gt_trajectory, coverage_history = [(env._robot_x, env._robot_y)], [info["coverage"]]
     step_count, total_distance, collisions = 0, 0.0, 0
     start_time = time.time()
+    time_history = [0.0]
 
     while step_count < max_steps:
         grid_map = env.slam.map
@@ -168,18 +193,30 @@ def run_rrt_exploration(env, max_steps=300):
         total_distance += np.hypot(gt_x - gt_trajectory[-1][0], gt_y - gt_trajectory[-1][1])
         gt_trajectory.append((gt_x, gt_y))
         coverage_history.append(info["coverage"])
+        time_history.append(time.time() - start_time)
         if info.get("collision", False): collisions += 1
         if terminated or truncated: break
         
-    return {"name": "RRT-Exploration (2017)", "trajectory": np.array(gt_trajectory), "coverage": coverage_history, "final_coverage": coverage_history[-1], "total_distance": total_distance, "collisions": collisions, "steps": step_count, "wall_time": time.time() - start_time}
+    return {
+        "name": "RRT-Exploration (2017)", 
+        "trajectory": np.array(gt_trajectory), 
+        "coverage": coverage_history, 
+        "final_coverage": coverage_history[-1], 
+        "total_distance": total_distance, 
+        "collisions": collisions, 
+        "steps": step_count, 
+        "wall_time": time.time() - start_time,
+        "time_history": time_history
+    }
 
 
-def run_stachniss_entropy(env, max_steps=300):
+def run_stachniss_entropy(env, seed, max_steps=300):
     """Stachniss et al. (2005) Mutual Information / Information-Theoretic Baseline."""
-    obs, info = env.reset(seed=42)
+    obs, info = env.reset(seed=seed)
     gt_trajectory, coverage_history = [(env._robot_x, env._robot_y)], [info["coverage"]]
     step_count, total_distance, collisions = 0, 0.0, 0
     start_time = time.time()
+    time_history = [0.0]
 
     while step_count < max_steps:
         grid_map = env.slam.map
@@ -233,21 +270,33 @@ def run_stachniss_entropy(env, max_steps=300):
         total_distance += np.hypot(gt_x - gt_trajectory[-1][0], gt_y - gt_trajectory[-1][1])
         gt_trajectory.append((gt_x, gt_y))
         coverage_history.append(info["coverage"])
+        time_history.append(time.time() - start_time)
         if info.get("collision", False): collisions += 1
         if terminated or truncated: break
         
-    return {"name": "Stachniss (2005)", "trajectory": np.array(gt_trajectory), "coverage": coverage_history, "final_coverage": coverage_history[-1], "total_distance": total_distance, "collisions": collisions, "steps": step_count, "wall_time": time.time() - start_time}
+    return {
+        "name": "Stachniss (2005)", 
+        "trajectory": np.array(gt_trajectory), 
+        "coverage": coverage_history, 
+        "final_coverage": coverage_history[-1], 
+        "total_distance": total_distance, 
+        "collisions": collisions, 
+        "steps": step_count, 
+        "wall_time": time.time() - start_time,
+        "time_history": time_history
+    }
 
 
-def run_omniray(model_path, env, max_steps=300):
+def run_omniray(model_path, env, seed, max_steps=300):
     """OmniRay 5-Layer System Inference."""
     model = PPO.load(model_path)
-    obs, info = env.reset(seed=42)
+    obs, info = env.reset(seed=seed)
     gt_trajectory, coverage_history = [], [info["coverage"]]
     base_env = env.env if hasattr(env, "env") else env
     gt_trajectory.append((base_env._robot_x, base_env._robot_y))
     step_count, total_distance, collisions = 0, 0.0, 0
     start_time = time.time()
+    time_history = [0.0]
 
     while step_count < max_steps:
         action, _ = model.predict(obs, deterministic=True)
@@ -257,10 +306,22 @@ def run_omniray(model_path, env, max_steps=300):
         total_distance += np.hypot(gt_x - gt_trajectory[-1][0], gt_y - gt_trajectory[-1][1])
         gt_trajectory.append((gt_x, gt_y))
         coverage_history.append(info["coverage"])
+        time_history.append(time.time() - start_time)
         if info.get("collision", False): collisions += 1
         if terminated or truncated: break
         
-    return {"name": "OmniRay (Ours)", "trajectory": np.array(gt_trajectory), "coverage": coverage_history, "final_coverage": coverage_history[-1], "total_distance": total_distance, "collisions": collisions, "steps": step_count, "wall_time": time.time() - start_time, "slam_map": base_env.slam.map.copy()}
+    return {
+        "name": "OmniRay (Ours)", 
+        "trajectory": np.array(gt_trajectory), 
+        "coverage": coverage_history, 
+        "final_coverage": coverage_history[-1], 
+        "total_distance": total_distance, 
+        "collisions": collisions, 
+        "steps": step_count, 
+        "wall_time": time.time() - start_time, 
+        "time_history": time_history,
+        "slam_map": base_env.slam.map.copy()
+    }
 
 
 if __name__ == "__main__":
@@ -269,7 +330,6 @@ if __name__ == "__main__":
     print("=" * 85)
 
     intel_walls = get_intel_lab_walls()
-    model_path = r"results\ablation_20260728_125451\full_seed42.zip"
     save_dir = r"ablation_eval_full"
     os.makedirs(save_dir, exist_ok=True)
 
@@ -279,52 +339,84 @@ if __name__ == "__main__":
         e.raycaster.set_walls(intel_walls)
         return e
 
-    # Execute all 5 models
-    print("\n  [1/5] Running Random Walk Baseline...")
-    res_rw = run_random_walk(create_env())
+    seeds = [42, 43, 44]
+    
+    raw_results = {
+        "Random Walk": [],
+        "Yamauchi (1997)": [],
+        "RRT-Exploration (2017)": [],
+        "Stachniss (2005)": [],
+        "OmniRay (Ours)": []
+    }
 
-    print("  [2/5] Running Yamauchi (1997) Frontier Baseline...")
-    res_yam = run_yamauchi(create_env())
+    for seed in seeds:
+        print(f"\n--- Running Seed {seed} ---")
+        
+        print("  Running Random Walk Baseline...")
+        raw_results["Random Walk"].append(run_random_walk(create_env(), seed))
 
-    print("  [3/5] Running RRT-Exploration (2017) Baseline...")
-    res_rrt = run_rrt_exploration(create_env())
+        print("  Running Yamauchi (1997) Frontier Baseline...")
+        raw_results["Yamauchi (1997)"].append(run_yamauchi(create_env(), seed))
 
-    print("  [4/5] Running Stachniss (2005) Information-Theoretic Baseline...")
-    res_stach = run_stachniss_entropy(create_env())
+        print("  Running RRT-Exploration (2017) Baseline...")
+        raw_results["RRT-Exploration (2017)"].append(run_rrt_exploration(create_env(), seed))
 
-    print("  [5/5] Running OmniRay 5-Layer System (Ours)...")
-    adaptive_env = AdaptiveActiveSLAMEnv(create_env(), enable_health=True, enable_adaptive_reward=True, enable_meta=True, enable_curriculum=True, enable_continual=True)
-    res_omni = run_omniray(model_path, adaptive_env)
+        print("  Running Stachniss (2005) Information-Theoretic Baseline...")
+        raw_results["Stachniss (2005)"].append(run_stachniss_entropy(create_env(), seed))
 
-    results = [res_rw, res_yam, res_rrt, res_stach, res_omni]
+        print("  Running OmniRay 5-Layer System (Ours)...")
+        adaptive_env = AdaptiveActiveSLAMEnv(create_env(), enable_health=True, enable_adaptive_reward=True, enable_meta=True, enable_curriculum=True, enable_continual=True)
+        model_path = f"results\\ablation_20260728_125451\\full_seed{seed}.zip"
+        raw_results["OmniRay (Ours)"].append(run_omniray(model_path, adaptive_env, seed))
 
-    # Print expanded summary table
-    print("\n" + "=" * 115)
-    print(f"{'Model / Algorithm':<22} | {'Coverage (%)':<12} | {'Path Length':<12} | {'Cov / Meter':<14} | {'Runtime (s)':<12} | {'Step Time':<12} | {'Collisions':<10}")
-    print("-" * 115)
-    for r in results:
-        cov_pct = r['final_coverage'] * 100
-        dist = r['total_distance']
-        cov_per_m = cov_pct / dist if dist > 0 else 0.0
-        step_time_ms = (r['wall_time'] / r['steps']) * 1000.0 if r['steps'] > 0 else 0.0
-        print(f"{r['name']:<22} | {cov_pct:.2f}%{'':<5} | {dist:.2f} m{'':<4} | {cov_per_m:.4f} %/m{'':<4} | {r['wall_time']:.2f} s{'':<5} | {step_time_ms:.2f} ms{'':<5} | {r['collisions']:<10}")
-    print("=" * 115)
+    summary_results = []
+    plot_results = []
 
-    # Plot Multi-Model Comparison
+    print("\n" + "=" * 135)
+    print(f"{'Model / Algorithm':<22} | {'Coverage (%)':<20} | {'Path Length (m)':<20} | {'Cov / Meter (%/m)':<22} | {'Runtime (s)':<18} | {'Collisions':<15}")
+    print("-" * 135)
+    
+    for name, list_runs in raw_results.items():
+        covs = [r['final_coverage'] * 100 for r in list_runs]
+        dists = [r['total_distance'] for r in list_runs]
+        cov_per_ms = [covs[i] / dists[i] if dists[i] > 0 else 0.0 for i in range(len(list_runs))]
+        runtimes = [r['wall_time'] for r in list_runs]
+        cols = [r['collisions'] for r in list_runs]
+        
+        cov_mean, cov_std = np.mean(covs), np.std(covs)
+        dist_mean, dist_std = np.mean(dists), np.std(dists)
+        cpm_mean, cpm_std = np.mean(cov_per_ms), np.std(cov_per_ms)
+        runtime_mean, runtime_std = np.mean(runtimes), np.std(runtimes)
+        col_mean, col_std = np.mean(cols), np.std(cols)
+        
+        print(f"{name:<22} | {cov_mean:.2f} ± {cov_std:.2f}%{'':<4} | {dist_mean:.2f} ± {dist_std:.2f} m{'':<3} | {cpm_mean:.4f} ± {cpm_std:.4f}{'':<3} | {runtime_mean:.2f} ± {runtime_std:.2f} s{'':<2} | {col_mean:.1f} ± {col_std:.1f}")
+        
+        min_steps = min(len(r['coverage']) for r in list_runs)
+        avg_coverage = np.mean([r['coverage'][:min_steps] for r in list_runs], axis=0)
+        avg_time = np.mean([r['time_history'][:min_steps] for r in list_runs], axis=0)
+        
+        plot_results.append({
+            "name": name,
+            "trajectory": list_runs[0]["trajectory"],
+            "avg_time": avg_time,
+            "avg_coverage": avg_coverage
+        })
+
+    print("=" * 135)
+
     fig, axes = plt.subplots(1, 2, figsize=(14, 6), facecolor="#0d0d1a")
     
-    # Trajectories
     ax1 = axes[0]
     ax1.set_facecolor("#0d0d1a")
     for x1, y1, x2, y2 in intel_walls:
         ax1.plot([x1, x2], [y1, y2], color="#ff6b6b", linewidth=1.8, alpha=0.7)
     
     colors = ["#ff5252", "#ff9f43", "#54a0ff", "#5f27cd", "#00ff88"]
-    for r, c in zip(results, colors):
-        linewidth = 2.5 if r["name"] == "OmniRay (Ours)" else 1.5
-        ax1.plot(r["trajectory"][:, 0], r["trajectory"][:, 1], color=c, linewidth=linewidth, label=r["name"])
+    for pr, c in zip(plot_results, colors):
+        linewidth = 2.5 if pr["name"] == "OmniRay (Ours)" else 1.5
+        ax1.plot(pr["trajectory"][:, 0], pr["trajectory"][:, 1], color=c, linewidth=linewidth, label=pr["name"])
     
-    ax1.set_title("Exploration Trajectories (Intel Lab)", color="white", fontsize=12, fontweight="bold")
+    ax1.set_title("Exploration Trajectories (Intel Lab - Seed 42 Representative)", color="white", fontsize=12, fontweight="bold")
     ax1.set_xlim(-5, 105)
     ax1.set_ylim(-5, 105)
     ax1.set_aspect("equal")
@@ -332,21 +424,20 @@ if __name__ == "__main__":
     ax1.tick_params(colors="white")
     ax1.legend(loc="upper left", facecolor="#0d0d1a", labelcolor="white", fontsize=9)
 
-    # Coverage progression
     ax2 = axes[1]
     ax2.set_facecolor("#0d0d1a")
-    for r, c in zip(results, colors):
-        linewidth = 2.5 if r["name"] == "OmniRay (Ours)" else 1.5
-        ax2.plot(np.array(r["coverage"])*100, color=c, linewidth=linewidth, label=r["name"])
+    for pr, c in zip(plot_results, colors):
+        linewidth = 2.5 if pr["name"] == "OmniRay (Ours)" else 1.5
+        ax2.plot(pr["avg_time"], pr["avg_coverage"] * 100, color=c, linewidth=linewidth, label=pr["name"])
         
-    ax2.set_title("Coverage Rate Progression (%)", color="white", fontsize=12, fontweight="bold")
-    ax2.set_xlabel("Simulation Steps", color="white")
+    ax2.set_title("Coverage Rate vs. Wall-Clock Time (3-Seed Mean)", color="white", fontsize=12, fontweight="bold")
+    ax2.set_xlabel("Wall-Clock Time (seconds)", color="white")
     ax2.set_ylabel("Map Coverage (%)", color="white")
     ax2.grid(color="#333355", linestyle="--", alpha=0.5)
     ax2.tick_params(colors="white")
     ax2.legend(loc="lower right", facecolor="#0d0d1a", labelcolor="white", fontsize=9)
 
-    plt.suptitle("Multi-Model Exploration Benchmark — Intel Research Lab", color="white", fontsize=14, fontweight="bold")
+    plt.suptitle("Multi-Seed Exploration Benchmark (Intel Research Lab)", color="white", fontsize=14, fontweight="bold")
     plt.tight_layout()
     
     out_img = os.path.join(save_dir, "multi_model_intel_benchmark.png")

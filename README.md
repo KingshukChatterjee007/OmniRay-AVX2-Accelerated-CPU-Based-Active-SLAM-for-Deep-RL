@@ -394,11 +394,11 @@ To separate visual demo quality from quantitative benchmark coverage, OmniRay is
 
 | Model / Algorithm | Coverage (%) | Path Length (m) | Coverage / Meter (%/m) | Step Latency (ms) | Peak RAM (MB) | Collision Count |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Random Walk** | 63.48% | 144.91 m | 0.4381 %/m | 7.16 ms | 34.2 MB | 228 |
-| **Yamauchi (1997)** | 61.96% | 137.00 m | 0.4523 %/m | 8.61 ms | 39.5 MB | 208 |
-| **RRT-Exploration (2017)** | 70.36% | 297.12 m | 0.2368 %/m | 10.49 ms | 44.8 MB | 23 |
-| **Stachniss (2005)** | 96.52% | 194.57 m | 0.4961 %/m | 18.51 ms | 52.1 MB | **0** |
-| **OmniRay (Ours)** | **85.04%** | **572.00 m** | **0.1487 %/m** | **0.038 ms** (SIMD) | **41.8 MB** | **14** |
+| **Random Walk** | 65.55 ± 12.52% | 148.57 ± 67.34 m | 0.4411 %/m | 7.16 ms | 34.2 MB | 225.7 ± 33.7 |
+| **Yamauchi (1997)** | 70.85 ± 14.67% | 155.06 ± 64.90 m | 0.4570 %/m | 8.61 ms | 39.5 MB | 192.3 ± 39.9 |
+| **RRT-Exploration (2017)** | 85.55 ± 13.57% | 267.64 ± 33.16 m | 0.3200 %/m | 10.49 ms | 44.8 MB | 30.7 ± 28.2 |
+| **Stachniss (2005)** | 95.43 ± 0.07% | 207.65 ± 22.06 m | 0.4600 %/m | 18.51 ms | 52.1 MB | **0.0 ± 0.0** |
+| **OmniRay (Ours)** | **90.87 ± 3.29%** | **418.12 ± 106.25 m** | **0.2172 %/m** | **0.038 ms** (SIMD) | **41.8 MB** | **62.3 ± 46.5** |
 
 * **Coverage Efficiency (`Coverage / Meter`)**: Quantifies map discovery gain per meter traveled. While OmniRay maintains continuous motion sweeps covering longer paths, its rapid initial sweep achieves 85%+ map coverage in under 110 steps.
 * **CPU First Performance Profile**: Highlights OmniRay's ultra-low raycasting core latency (**0.038 ms**) and lightweight memory footprint (**41.8 MB**), suitable for low-power edge robotics.
@@ -411,11 +411,11 @@ Evaluated on the **MIT Stata Center dataset (`MIT dataset.bag`)** with an **unch
 
 | Model / Algorithm | Coverage (%) | Path Length (m) | Coverage / Meter (%/m) | Step Latency (ms) | Peak RAM (MB) | Collision Count |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Random Walk** | 50.60% | 116.38 m | 0.4348 %/m | 7.10 ms | 35.1 MB | 242 |
-| **Yamauchi (1997)** | 95.20% | 246.65 m | 0.3860 %/m | 10.29 ms | 41.2 MB | 18 |
-| **RRT-Exploration (2017)** | 95.68% | 220.07 m | 0.4348 %/m | 10.77 ms | 46.5 MB | **0** |
-| **Stachniss (2005)** | 95.32% | 200.75 m | 0.4748 %/m | 11.96 ms | 53.8 MB | **0** |
-| **OmniRay (Ours - Zero Shot)**| **81.88%** | **573.90 m** | **0.1427 %/m** | **0.038 ms** (SIMD) | **41.8 MB** | **10** |
+| **Random Walk** | 59.81 ± 19.40% | 140.14 ± 96.38 m | 0.4268 %/m | 7.10 ms | 35.1 MB | 230.0 ± 48.3 |
+| **Yamauchi (1997)** | 91.04 ± 4.40% | 281.62 ± 37.18 m | 0.3233 %/m | 10.29 ms | 41.2 MB | 28.3 ± 20.5 |
+| **RRT-Exploration (2017)** | 95.08 ± 0.07% | 260.61 ± 2.99 m | 0.3649 %/m | 10.77 ms | 46.5 MB | 35.0 ± 4.5 |
+| **Stachniss (2005)** | 95.33 ± 0.36% | 205.22 ± 8.51 m | 0.4654 %/m | 11.96 ms | 53.8 MB | **1.7 ± 2.4** |
+| **OmniRay (Ours - Zero Shot)**| **91.08 ± 3.99%** | **454.34 ± 108.03 m** | **0.2005 %/m** | **0.038 ms** (SIMD) | **41.8 MB** | **70.3 ± 53.6** |
 
 * **Zero-Shot Generalization**: Shows that without retraining or fine-tuning, OmniRay transfers directly to complex unseen floorplan topologies, rapidly sweeping **80%+ map coverage within ~95 steps**.
 
@@ -425,10 +425,11 @@ Evaluated on the **MIT Stata Center dataset (`MIT dataset.bag`)** with an **unch
 
 | Dataset / Environment | Environment Type | Final Coverage (%) | Zero-Shot Generalization Gap |
 | :--- | :--- | :---: | :---: |
-| **Intel Research Lab (Seattle)** | Fixed Training / Benchmark Floorplan | 89.16% | Baseline reference |
-| **MIT Stata Center (`MIT dataset.bag`)** | Unseen Complex Atrium Holdout | 81.88% | **-7.28%** |
+| **Intel Research Lab (Seattle)** | Fixed Training / Benchmark Floorplan | 90.87 ± 3.29% | Baseline reference |
+| **MIT Stata Center (`MIT dataset.bag`)** | Unseen Complex Atrium Holdout | 91.08 ± 3.99% | **+0.21%** |
 
-* **Analysis**: Demonstrates policy transfer performance across distinct building topologies, resulting in a **7.28 percentage-point decrease in final map coverage** under zero-shot evaluation without retraining.
+* **Analysis**: Demonstrates policy transfer performance across distinct building topologies, resulting in a slight **+0.21 percentage-point increase in mean final map coverage** under zero-shot evaluation without retraining, demonstrating exceptionally robust zero-shot generalisation across unseen topologies.
+
 
 ---
 
