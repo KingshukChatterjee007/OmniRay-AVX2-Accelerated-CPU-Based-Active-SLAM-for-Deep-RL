@@ -2,6 +2,12 @@
 
 **A pluggable SIMD raycasting engine, vectorized particle filter, and Gymnasium environment for training and benchmarking Active SLAM agents entirely on consumer CPU hardware.**
 
+<p align="center">
+  <strong>Author:</strong> Kingshuk Chatterjee<br>
+  <strong>Co-Author:</strong> Ayush Ranjan<br>
+  <strong>Co-Author:</strong> Raghav Singh Parihar
+</p>
+
 ---
 
 ## Abstract
