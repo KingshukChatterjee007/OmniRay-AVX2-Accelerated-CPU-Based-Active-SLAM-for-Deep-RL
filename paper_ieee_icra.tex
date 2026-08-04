@@ -193,7 +193,7 @@ Six configurations $\times$ 3 seeds (42, 43, 44) $\times$ 50{,}000 steps = 900{,
 \end{figure}
 
 Table~\ref{tab:intel} compares OmniRay against four baselines under identical noise.
-OmniRay achieves $90.87 \pm 3.29\%$ mean coverage with $62.3 \pm 46.5$ collisions and $0.038$\,ms SIMD raycasting latency---a $188\times$ reduction versus Stachniss~(2005).
+OmniRay achieves $90.87 \pm 3.29\%$ mean coverage with $62.3 \pm 46.5$ collisions and $3.09$\,ms decision latency ($0.038$\,ms SIMD core raycasting latency)---a $6\times$ reduction in decision latency versus Stachniss~(2005).
 
 \begin{table}[t]
 \caption{Multi-Seed Benchmark --- Intel Research Lab (Mean $\pm$ SD)}
