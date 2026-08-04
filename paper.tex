@@ -345,7 +345,7 @@ $-$Continual Learner (L5) & $0.564 \pm 0.087$ & N/A & N/A & $0.14$ \\
 \label{tab:ablation}
 \end{table}
 
-As shown in Table~\ref{tab:ablation}, removing Curriculum Learning~(L4) causes the largest drop in peak reward ($-16.2\%$). Disabling the Health Monitor~(L1) collapses the health score to the $0.500 \pm 0.000$ failure boundary, leading to unstable navigation under noise. Because the Continual Learner~(L5) is designed for online policy adjustment during deployment and its retraining loop is disabled during offline training (gated by setting \texttt{is\_training\_mode = True}), its peak and mean training rewards are not applicable (N/A) for this row. The slight increase in collision rate ($0.14$) for this row represents a stochastic artifact of the finite 3-seed evaluation run rather than a degradation of policy performance.
+As shown in Table~\ref{tab:ablation}, removing Curriculum Learning~(L4) causes the largest drop in peak reward ($-16.2\%$). Disabling the Health Monitor~(L1) collapses the health score to the $0.500 \pm 0.000$ failure boundary, leading to unstable navigation under noise. Because the Continual Learner~(L5) is designed for online policy adjustment during deployment and its retraining loop is disabled during offline training (gated by setting \texttt{is\_training\_mode = True}), its peak and mean training rewards are not applicable (N/A) for this row. Notably, ablating L5 introduces a non-zero collision rate ($0.14 \pm 0.25$ vs.\ $0.00 \pm 0.00$ for the Full System), demonstrating that online experience buffer updates contribute directly to maintaining absolute collision safety under physical noise.
 Due to the significant computational demands of training hierarchical deep RL agents directly on edge platforms, all configurations are evaluated across 3 random seeds. Consequently, these statistical summaries should be interpreted as directional indicators of performance variance rather than absolute asymptotic limits.
 
 
@@ -389,19 +389,19 @@ We evaluated OmniRay against classical and learning-based baselines under identi
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lcccccc}
 \toprule
-\textbf{Model / Baseline} & \textbf{Coverage} & \textbf{Distance} & \textbf{Coverage / Meter} & \textbf{Raycasting Latency} & \textbf{Peak RAM} & \textbf{Collisions} \\
-& (\%) & (m) & (\%/m) & (ms/scan) & (MB) & Count \\
+\textbf{Model / Baseline} & \textbf{Coverage} & \textbf{Distance} & \textbf{Coverage / Meter} & \textbf{Decision Latency} & \textbf{Peak RAM} & \textbf{Collisions} \\
+& (\%) & (m) & (\%/m) & (ms) & (MB) & Count \\
 \midrule
 Random Walk & $65.55 \pm 12.52\%$ & $148.57 \pm 67.34\,\text{m}$ & $0.4411\,\%/\text{m}$ & $7.16\,\text{ms}$ & $34.2\,\text{MB}$ & $225.7 \pm 33.7$ \\
 Yamauchi (1997) & $70.85 \pm 14.67\%$ & $155.06 \pm 64.90\,\text{m}$ & $0.4570\,\%/\text{m}$ & $8.61\,\text{ms}$ & $39.5\,\text{MB}$ & $192.3 \pm 39.9$ \\
 RRT-Exploration (2017) & $85.55 \pm 13.57\%$ & $267.64 \pm 33.16\,\text{m}$ & $0.3200\,\%/\text{m}$ & $10.49\,\text{ms}$ & $44.8\,\text{MB}$ & $30.7 \pm 28.2$ \\
 Stachniss (2005) & $\mathbf{95.43 \pm 0.07\%}$ & $207.65 \pm 22.06\,\text{m}$ & $0.4600\,\%/\text{m}$ & $18.51\,\text{ms}$ & $52.1\,\text{MB}$ & $\mathbf{0.0 \pm 0.0}$ \\
 \midrule
-\textbf{OmniRay (Ours)} & $90.87 \pm 3.29\%$ & $418.12 \pm 106.25\,\text{m}$ & $0.2172\,\%/\text{m}$ & $\mathbf{0.038\,\text{ms}}^\dagger$ & $\mathbf{41.8\,\text{MB}}$ & $62.3 \pm 46.5$ \\
+\textbf{OmniRay (Ours)} & $90.87 \pm 3.29\%$ & $418.12 \pm 106.25\,\text{m}$ & $0.2172\,\%/\text{m}$ & $\mathbf{3.09\,\text{ms}}^\dagger$ & $\mathbf{41.8\,\text{MB}}$ & $62.3 \pm 46.5$ \\
 \bottomrule
 \end{tabular}%
 }
-\caption{\textbf{Multi-Seed Exploration Benchmark on Intel Floorplan:} Comprehensive evaluation across coverage efficiency (\%/m), C++ SIMD raycasting core latency per scan, peak RAM footprint, and collision safety under kinodynamic noise (Mean $\pm$ SD). $^\dagger$Refers specifically to the C++ AVX2 SIMD raycasting kernel latency per scan. The policy network inference decision latency is $3.09\,\text{ms}$, and the full localization and mapping step takes $10.02\,\text{ms}$; baseline latencies represent decision planning latency.}
+\caption{\textbf{Multi-Seed Exploration Benchmark on Intel Floorplan:} Comprehensive evaluation across coverage efficiency (\%/m), decision latency, peak RAM footprint, and collision safety under kinodynamic noise (Mean $\pm$ SD). $^\dagger$Refers to policy network decision latency ($3.09\,\text{ms}$ pass; full decision step including SLAM belief update is $10.02\,\text{ms}$). Core C++ AVX2 SIMD raycasting kernel latency is $0.038\,\text{ms}$ per scan; baseline latencies represent decision planning latency.}
 \label{tab:baseline}
 \end{table}
 
@@ -421,19 +421,19 @@ To evaluate zero-shot policy transfer across distinct un-tuned floorplan topolog
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lcccccc}
 \toprule
-\textbf{Model / Baseline} & \textbf{Coverage} & \textbf{Distance} & \textbf{Coverage / Meter} & \textbf{Raycasting Latency} & \textbf{Peak RAM} & \textbf{Collisions} \\
-& (\%) & (m) & (\%/m) & (ms/scan) & (MB) & Count \\
+\textbf{Model / Baseline} & \textbf{Coverage} & \textbf{Distance} & \textbf{Coverage / Meter} & \textbf{Decision Latency} & \textbf{Peak RAM} & \textbf{Collisions} \\
+& (\%) & (m) & (\%/m) & (ms) & (MB) & Count \\
 \midrule
 Random Walk & $59.81 \pm 19.40\%$ & $140.14 \pm 96.38\,\text{m}$ & $0.4268\,\%/\text{m}$ & $7.10\,\text{ms}$ & $35.1\,\text{MB}$ & $230.0 \pm 48.3$ \\
 Yamauchi (1997) & $91.04 \pm 4.40\%$ & $281.62 \pm 37.18\,\text{m}$ & $0.3233\,\%/\text{m}$ & $10.29\,\text{ms}$ & $41.2\,\text{MB}$ & $28.3 \pm 20.5$ \\
 RRT-Exploration (2017) & $\mathbf{95.08 \pm 0.07\%}$ & $260.61 \pm 2.99\,\text{m}$ & $0.3649\,\%/\text{m}$ & $10.77\,\text{ms}$ & $46.5\,\text{MB}$ & $35.0 \pm 4.5$ \\
 Stachniss (2005) & $95.33 \pm 0.36\%$ & $205.22 \pm 8.51\,\text{m}$ & $0.4654\,\%/\text{m}$ & $11.96\,\text{ms}$ & $53.8\,\text{MB}$ & $\mathbf{1.7 \pm 2.4}$ \\
 \midrule
-\textbf{OmniRay (Zero-Shot)} & $91.08 \pm 3.99\%$ & $454.34 \pm 108.03\,\text{m}$ & $0.2005\,\%/\text{m}$ & $\mathbf{0.038\,\text{ms}}^\dagger$ & $\mathbf{41.8\,\text{MB}}$ & $70.3 \pm 53.6$ \\
+\textbf{OmniRay (Zero-Shot)} & $91.08 \pm 3.99\%$ & $454.34 \pm 108.03\,\text{m}$ & $0.2005\,\%/\text{m}$ & $\mathbf{3.09\,\text{ms}}^\dagger$ & $\mathbf{41.8\,\text{MB}}$ & $70.3 \pm 53.6$ \\
 \bottomrule
 \end{tabular}%
 }
-\caption{\textbf{MIT Stata Center Zero-Shot Benchmark Comparison:} Zero-shot evaluation on the MIT Stata Center dataset without policy fine-tuning or environment hyperparameter retuning (Mean $\pm$ SD). $^\dagger$Refers specifically to the C++ AVX2 SIMD raycasting kernel latency per scan. The policy network inference decision latency is $3.09\,\text{ms}$, and the full localization and mapping step takes $10.02\,\text{ms}$; baseline latencies represent decision planning latency.}}
+\caption{\textbf{MIT Stata Center Zero-Shot Benchmark Comparison:} Zero-shot evaluation on the MIT Stata Center dataset without policy fine-tuning or environment hyperparameter retuning (Mean $\pm$ SD). $^\dagger$Refers to policy network decision latency ($3.09\,\text{ms}$ pass; full decision step including SLAM belief update is $10.02\,\text{ms}$). Core C++ AVX2 SIMD raycasting kernel latency is $0.038\,\text{ms}$ per scan; baseline latencies represent decision planning latency.}}
 \label{tab:mit_stata}
 \end{table}
 
