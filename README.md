@@ -126,6 +126,8 @@ py -3.11 train_rl.py --adaptive --meta-policy --curriculum --continual --total-s
 | **Stachniss (2005)** | 95.33 ± 0.36% | 205.22 ± 8.51 m | 0.4654 %/m | 11.96 ms | 53.8 MB | **1.7 ± 2.4** |
 | **OmniRay (Ours - Zero Shot)**| **91.08 ± 3.99%** | **454.34 ± 108.03 m** | **0.2005 %/m** | **3.09 ms** | **41.8 MB** | **70.3 ± 53.6** |
 
+![MIT Stata Benchmark Report](ablation_eval_full/mit_stata_multi_model_benchmark.png)
+
 **Zero-Shot Generalization Gap:**
 
 | Dataset / Environment | Environment Type | Final Coverage (%) | Zero-Shot Generalization Gap |
