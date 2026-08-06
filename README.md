@@ -1,4 +1,4 @@
-# OmniRay: AVX2-Accelerated CPU-Based Active SLAM for Deep RL
+# OmniRay Avx2 : A CPU-Based Autonomous Active SLAM Framework with Adaptive Curriculum Learning and AVX2 Acceleration
 
 **A pluggable SIMD raycasting engine, vectorized particle filter, and Gymnasium environment for training and benchmarking Active SLAM agents on consumer CPU hardware.**
 
